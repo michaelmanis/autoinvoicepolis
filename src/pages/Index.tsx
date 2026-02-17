@@ -16,7 +16,7 @@ const Index = () => {
             <h1 className="text-xl font-semibold text-foreground">Invoice Automation</h1>
             
           </div>
-          <img src={polisLogo} alt="Polis Analytica" className="h-10 object-contain" />
+          <img src={polisLogo} alt="Polis Analytica" className="h-16 object-contain" />
         </header>
 
         <div className="animate-slide-in p-8">
