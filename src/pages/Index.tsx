@@ -14,7 +14,7 @@ const Index = () => {
         <header className="flex items-center justify-between border-b border-border bg-card px-8 py-4">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Invoice Automation</h1>
-            <p className="text-sm text-muted-foreground">Email → OCR → Shipment → Invoice → ERP → myDATA</p>
+            
           </div>
           <img src={polisLogo} alt="Polis Analytica" className="h-10 object-contain" />
         </header>
@@ -24,8 +24,8 @@ const Index = () => {
           {activeView === "invoices" && <InvoicesPage />}
         </div>
       </main>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
