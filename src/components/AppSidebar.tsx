@@ -1,19 +1,22 @@
-import { LayoutDashboard, Mail, FileText, Settings, HelpCircle } from "lucide-react";
+import { useState } from "react";
+import { LayoutDashboard, FileText, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", active: true },
-  { icon: Mail, label: "Emails", active: false },
-  { icon: FileText, label: "Τιμολόγια", active: false },
-  { icon: Settings, label: "Ρυθμίσεις", active: false },
-  { icon: HelpCircle, label: "Βοήθεια", active: false },
+  { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
+  { icon: FileText, label: "Τιμολόγια", id: "invoices" },
 ];
 
 interface AppSidebarProps {
   collapsed?: boolean;
+  activeView: string;
+  onNavigate: (view: string) => void;
 }
 
-export default function AppSidebar({ collapsed = false }: AppSidebarProps) {
+export default function AppSidebar({ collapsed = false, activeView, onNavigate }: AppSidebarProps) {
+  const { signOut, user } = useAuth();
+
   return (
     <aside className={cn(
       "flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all",
@@ -30,10 +33,11 @@ export default function AppSidebar({ collapsed = false }: AppSidebarProps) {
       <nav className="flex-1 space-y-1 px-2 py-4">
         {navItems.map((item) => (
           <button
-            key={item.label}
+            key={item.id}
+            onClick={() => onNavigate(item.id)}
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-              item.active
+              activeView === item.id
                 ? "bg-sidebar-accent text-sidebar-primary"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             )}
@@ -44,11 +48,18 @@ export default function AppSidebar({ collapsed = false }: AppSidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border px-4 py-4">
-        <p className={cn(
-          "text-xs text-sidebar-foreground/50",
-          collapsed && "text-center"
-        )}>
+      <div className="space-y-2 border-t border-sidebar-border px-2 py-4">
+        {!collapsed && user && (
+          <p className="truncate px-3 text-xs text-sidebar-foreground/50">{user.email}</p>
+        )}
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        >
+          <LogOut className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>Αποσύνδεση</span>}
+        </button>
+        <p className={cn("px-3 text-xs text-sidebar-foreground/50", collapsed && "text-center")}>
           {collapsed ? "©" : "© 2026 Polis Analytica"}
         </p>
       </div>

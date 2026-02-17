@@ -1,1 +1,4 @@
 project_id = "xarwqoikjvytujenedrk"
+
+[functions.extract-invoice]
+verify_jwt = false
