@@ -88,6 +88,40 @@ export default function Auth() {
           </Button>
         </form>
 
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">ή</span>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={loading}
+          onClick={async () => {
+            setLoading(true);
+            try {
+              const demoEmail = `demo_${Date.now()}@demo.invoice-automation.app`;
+              const demoPass = crypto.randomUUID();
+              const { error } = await supabase.auth.signUp({ email: demoEmail, password: demoPass });
+              if (error) throw error;
+              // auto-confirm is enabled, so sign in immediately
+              const { error: loginErr } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPass });
+              if (loginErr) throw loginErr;
+              navigate("/");
+            } catch (error: any) {
+              toast({ title: "Σφάλμα", description: error.message, variant: "destructive" });
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          🚀 Είσοδος ως Demo
+        </Button>
+
         <p className="text-center text-sm text-muted-foreground">
           {isLogin ? "Δεν έχετε λογαριασμό;" : "Έχετε ήδη λογαριασμό;"}{" "}
           <button
