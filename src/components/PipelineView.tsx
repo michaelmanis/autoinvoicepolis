@@ -1,4 +1,4 @@
-import { Mail, ScanText, Truck, FileText, Database, Send, Clock, CheckCircle2, AlertCircle, Plus } from "lucide-react";
+import { Mail, ScanText, Truck, FileText, Database, Clock, CheckCircle2, AlertCircle, Plus } from "lucide-react";
 
 const pipelineSteps = [
 { icon: Mail, label: "Email", description: "Λήψη email", color: "text-info" },
@@ -6,14 +6,14 @@ const pipelineSteps = [
 { icon: Truck, label: "Shipment", description: "Draft αποστολής", color: "text-primary" },
 { icon: FileText, label: "Invoice", description: "Draft τιμολογίου", color: "text-primary" },
 { icon: Database, label: "ERP", description: "Καταχώρηση", color: "text-success" },
-{ icon: Send, label: "myDATA", description: "Υποβολή ΑΑΔΕ", color: "text-success" }];
+];
 
 
 const recentItems = [
-{ id: "INV-2024-0891", sender: "ACME Corp", status: "completed", step: "myDATA", date: "17 Φεβ 2026" },
+{ id: "INV-2024-0891", sender: "ACME Corp", status: "completed", step: "ERP", date: "17 Φεβ 2026" },
 { id: "INV-2024-0890", sender: "Ελληνικά Τρόφιμα ΑΕ", status: "processing", step: "OCR", date: "17 Φεβ 2026" },
 { id: "INV-2024-0889", sender: "Tech Solutions", status: "review", step: "Invoice Draft", date: "16 Φεβ 2026" },
-{ id: "INV-2024-0888", sender: "Μεταφορική Βορρά", status: "completed", step: "myDATA", date: "16 Φεβ 2026" },
+{ id: "INV-2024-0888", sender: "Μεταφορική Βορρά", status: "completed", step: "ERP", date: "16 Φεβ 2026" },
 { id: "INV-2024-0887", sender: "Global Trade Ltd", status: "error", step: "ERP", date: "15 Φεβ 2026" }];
 
 
