@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Send, Database, Loader2 } from "lucide-react";
 
 interface InvoiceDetailProps {
   invoice: any;
@@ -61,6 +61,33 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
     updateMutation.mutate(updated);
   };
 
+  const [erpSending, setErpSending] = useState(false);
+
+  const handleSendToERP = async () => {
+    setErpSending(true);
+    try {
+      // Mock ERP submission — simulate 1.5s delay
+      await new Promise((r) => setTimeout(r, 1500));
+
+      // Update status to submitted
+      const { error } = await supabase
+        .from("invoices")
+        .update({ status: "submitted" })
+        .eq("id", invoice.id);
+      if (error) throw error;
+
+      setForm((prev) => ({ ...prev, status: "submitted" }));
+      toast({
+        title: "Στάλθηκε στο ERP!",
+        description: `Το τιμολόγιο ${form.invoice_number || invoice.id} καταχωρήθηκε επιτυχώς. (Mock)`,
+      });
+    } catch (err: any) {
+      toast({ title: "Σφάλμα ERP", description: err.message, variant: "destructive" });
+    } finally {
+      setErpSending(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -83,6 +110,18 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
               <CheckCircle2 className="mr-2 h-4 w-4" />
               Έγκριση
             </Button>
+          )}
+          {form.status === "approved" && (
+            <Button onClick={handleSendToERP} disabled={erpSending} className="bg-success hover:bg-success/90 text-success-foreground">
+              {erpSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
+              Αποστολή σε ERP
+            </Button>
+          )}
+          {form.status === "submitted" && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-4 py-2 text-sm font-medium text-success">
+              <CheckCircle2 className="h-4 w-4" />
+              Καταχωρήθηκε στο ERP
+            </span>
           )}
         </div>
       </div>
