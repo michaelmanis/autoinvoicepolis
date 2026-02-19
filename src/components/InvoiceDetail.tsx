@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, CheckCircle2, Database, Loader2, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Database, Loader2, FileText, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Document, Page, pdfjs } from "react-pdf";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface InvoiceDetailProps {
   invoice: any;
@@ -15,6 +20,12 @@ interface InvoiceDetailProps {
 
 export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
   const { toast } = useToast();
+  const [numPages, setNumPages] = useState<number>(0);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setPageNumber(1);
+  }, []);
   const [form, setForm] = useState({
     supplier: invoice.supplier || "",
     supplier_vat: invoice.supplier_vat || "",
@@ -149,20 +160,40 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
                 </a>
               </div>
               {isPdf ? (
-                <div className="flex flex-col items-center justify-center min-h-[500px] gap-4 p-8 text-center bg-muted/30">
-                  <FileText className="h-16 w-16 text-muted-foreground opacity-40" />
-                  <p className="text-sm text-muted-foreground max-w-xs">
-                    Η προεπισκόπηση PDF δεν είναι διαθέσιμη εδώ. Ανοίξτε το αρχείο σε νέα καρτέλα.
-                  </p>
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                <div className="flex flex-col items-center bg-muted/30">
+                  <Document
+                    file={fileUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    loading={
+                      <div className="flex items-center justify-center min-h-[400px] gap-2 text-muted-foreground">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span className="text-sm">Φόρτωση PDF…</span>
+                      </div>
+                    }
+                    error={
+                      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 p-8 text-center">
+                        <FileText className="h-12 w-12 text-muted-foreground opacity-40" />
+                        <p className="text-sm text-muted-foreground">Αδυναμία φόρτωσης PDF.</p>
+                        <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                          <ExternalLink className="h-4 w-4" />Άνοιγμα σε νέα καρτέλα
+                        </a>
+                      </div>
+                    }
                   >
-                    <ExternalLink className="h-4 w-4" />
-                    Άνοιγμα PDF σε νέα καρτέλα
-                  </a>
+                    <Page pageNumber={pageNumber} width={560} renderTextLayer renderAnnotationLayer />
+                  </Document>
+                  {numPages > 1 && (
+                    <div className="flex items-center gap-3 py-3 border-t border-border w-full justify-center">
+                      <Button variant="ghost" size="icon" onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">{pageNumber} / {numPages}</span>
+                      <Button variant="ghost" size="icon" onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-center bg-muted/30 p-4 min-h-[400px]">
