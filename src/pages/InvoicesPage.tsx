@@ -101,7 +101,13 @@ export default function InvoicesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const filePath = `${user.id}/${Date.now()}_${file.name}`;
+      const safeFileName = file.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // strip diacritics
+        .replace(/[^\x00-\x7F]/g, "_")   // replace non-ASCII (e.g. Greek) with _
+        .replace(/\s+/g, "_")            // replace spaces with _
+        .replace(/_+/g, "_");            // collapse multiple underscores
+      const filePath = `${user.id}/${Date.now()}_${safeFileName}`;
       const { error: uploadError } = await supabase.storage
         .from("invoices")
         .upload(filePath, file);
