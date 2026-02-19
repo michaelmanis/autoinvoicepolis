@@ -149,29 +149,20 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
                 </a>
               </div>
               {isPdf ? (
-                <div className="flex flex-col min-h-[600px]">
-                  <object
-                    data={fileUrl}
-                    type="application/pdf"
-                    className="w-full flex-1 min-h-[600px]"
+                <div className="flex flex-col items-center justify-center min-h-[500px] gap-4 p-8 text-center bg-muted/30">
+                  <FileText className="h-16 w-16 text-muted-foreground opacity-40" />
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Η προεπισκόπηση PDF δεν είναι διαθέσιμη εδώ. Ανοίξτε το αρχείο σε νέα καρτέλα.
+                  </p>
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                   >
-                    {/* Fallback when browser blocks inline PDF */}
-                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4 p-8 text-center bg-muted/30">
-                      <FileText className="h-16 w-16 text-muted-foreground opacity-50" />
-                      <p className="text-sm text-muted-foreground">
-                        Ο browser δεν μπορεί να εμφανίσει το PDF εδώ.
-                      </p>
-                      <a
-                        href={fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Άνοιγμα PDF σε νέα καρτέλα
-                      </a>
-                    </div>
-                  </object>
+                    <ExternalLink className="h-4 w-4" />
+                    Άνοιγμα PDF σε νέα καρτέλα
+                  </a>
                 </div>
               ) : (
                 <div className="flex items-center justify-center bg-muted/30 p-4 min-h-[400px]">
