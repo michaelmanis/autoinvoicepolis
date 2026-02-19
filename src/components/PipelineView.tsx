@@ -1,38 +1,81 @@
-import { Mail, ScanText, Truck, FileText, Database, Clock, CheckCircle2, AlertCircle, Plus } from "lucide-react";
+import { Mail, ScanText, Truck, FileText, Database, Clock, CheckCircle2, AlertCircle, Plus, ArrowRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 const pipelineSteps = [
-{ icon: Mail, label: "Email", description: "Λήψη email", color: "text-info" },
-{ icon: ScanText, label: "OCR", description: "Αναγνώριση", color: "text-accent" },
-{ icon: Truck, label: "Shipment", description: "Draft αποστολής", color: "text-primary" },
-{ icon: FileText, label: "Invoice", description: "Draft τιμολογίου", color: "text-primary" },
-{ icon: Database, label: "ERP", description: "Καταχώρηση", color: "text-success" },
+  { icon: Mail, label: "Email", description: "Λήψη email", color: "text-info" },
+  { icon: ScanText, label: "OCR", description: "Αναγνώριση", color: "text-accent" },
+  { icon: Truck, label: "Shipment", description: "Draft αποστολής", color: "text-primary" },
+  { icon: FileText, label: "Invoice", description: "Draft τιμολογίου", color: "text-primary" },
+  { icon: Database, label: "ERP", description: "Καταχώρηση", color: "text-success" },
 ];
 
+const statusConfig: Record<string, { label: string; className: string; icon: typeof CheckCircle2; barColor: string }> = {
+  draft: { label: "Draft", className: "bg-info/10 text-info", icon: Clock, barColor: "hsl(210 60% 50%)" },
+  review: { label: "Αναμονή Ελέγχου", className: "bg-warning/10 text-warning", icon: AlertCircle, barColor: "hsl(38 92% 50%)" },
+  approved: { label: "Εγκρίθηκε", className: "bg-success/10 text-success", icon: CheckCircle2, barColor: "hsl(152 60% 42%)" },
+  submitted: { label: "Υποβλήθηκε στο ERP", className: "bg-success/10 text-success", icon: CheckCircle2, barColor: "hsl(152 60% 42%)" },
+  error: { label: "Σφάλμα", className: "bg-destructive/10 text-destructive", icon: AlertCircle, barColor: "hsl(0 72% 51%)" },
+};
 
-const recentItems = [
-{ id: "INV-2024-0891", sender: "ACME Corp", status: "completed", step: "ERP", date: "17 Φεβ 2026" },
-{ id: "INV-2024-0890", sender: "Ελληνικά Τρόφιμα ΑΕ", status: "processing", step: "OCR", date: "17 Φεβ 2026" },
-{ id: "INV-2024-0889", sender: "Tech Solutions", status: "review", step: "Invoice Draft", date: "16 Φεβ 2026" },
-{ id: "INV-2024-0888", sender: "Μεταφορική Βορρά", status: "completed", step: "ERP", date: "16 Φεβ 2026" },
-{ id: "INV-2024-0887", sender: "Global Trade Ltd", status: "error", step: "ERP", date: "15 Φεβ 2026" }];
-
-
-const statusConfig: Record<string, {label: string;className: string;icon: typeof CheckCircle2;}> = {
-  completed: { label: "Ολοκληρώθηκε", className: "bg-success/10 text-success", icon: CheckCircle2 },
-  processing: { label: "Επεξεργασία", className: "bg-info/10 text-info", icon: Clock },
-  review: { label: "Αναμονή", className: "bg-warning/10 text-warning", icon: AlertCircle },
-  error: { label: "Σφάλμα", className: "bg-destructive/10 text-destructive", icon: AlertCircle }
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-lg border border-border bg-card px-4 py-2 shadow-elevated">
+        <p className="text-sm font-medium text-card-foreground">{label}</p>
+        <p className="text-2xl font-semibold text-primary">{payload[0].value}</p>
+        <p className="text-xs text-muted-foreground">τιμολόγια</p>
+      </div>
+    );
+  }
+  return null;
 };
 
 export default function PipelineView() {
+  const { data: invoices } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("invoices").select("status, created_at");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Build stage counts
+  const stageCounts = Object.entries(statusConfig).map(([key, cfg]) => ({
+    status: key,
+    label: cfg.label,
+    count: invoices?.filter((inv) => inv.status === key).length ?? 0,
+    barColor: cfg.barColor,
+    className: cfg.className,
+    icon: cfg.icon,
+  }));
+
+  const total = invoices?.length ?? 0;
+  const today = invoices?.filter((inv) => {
+    const d = new Date(inv.created_at);
+    const now = new Date();
+    return d.toDateString() === now.toDateString();
+  }).length ?? 0;
+
   return (
     <div className="space-y-8">
       {/* Pipeline Flow */}
       <div className="rounded-xl border border-border bg-card p-6 shadow-card">
         <h2 className="mb-6 font-sans text-lg font-semibold text-card-foreground">Pipeline Επεξεργασίας</h2>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {pipelineSteps.map((step, i) =>
-          <div key={step.label} className="flex items-center gap-2">
+          {pipelineSteps.map((step, i) => (
+            <div key={step.label} className="flex items-center gap-2">
               <div className="flex flex-col items-center gap-2">
                 <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-secondary transition-shadow hover:shadow-elevated">
                   <step.icon className={`h-6 w-6 ${step.color}`} />
@@ -42,70 +85,96 @@ export default function PipelineView() {
                   <p className="text-xs text-muted-foreground">{step.description}</p>
                 </div>
               </div>
-              {i < pipelineSteps.length - 1
-
-            }
+              {i < pipelineSteps.length - 1 && (
+                <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+              )}
             </div>
-          )}
+          ))}
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
-        { label: "Σήμερα", value: "12", sub: "νέα emails" },
-        { label: "Σε επεξεργασία", value: "3", sub: "τιμολόγια" },
-        { label: "Αναμονή ελέγχου", value: "5", sub: "drafts" },
-        { label: "Ολοκληρωμένα", value: "847", sub: "αυτόν τον μήνα" }].
-        map((stat) =>
-        <div key={stat.label} className="rounded-xl border border-border bg-card p-5 shadow-card">
+          { label: "Σήμερα", value: String(today), sub: "νέα τιμολόγια" },
+          { label: "Σε επεξεργασία", value: String(stageCounts.find(s => s.status === "draft")?.count ?? 0), sub: "σε draft" },
+          { label: "Αναμονή ελέγχου", value: String(stageCounts.find(s => s.status === "review")?.count ?? 0), sub: "drafts" },
+          { label: "Ολοκληρωμένα", value: String((stageCounts.find(s => s.status === "approved")?.count ?? 0) + (stageCounts.find(s => s.status === "submitted")?.count ?? 0)), sub: "εγκεκριμένα" },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-border bg-card p-5 shadow-card">
             <p className="text-sm text-muted-foreground">{stat.label}</p>
             <p className="mt-1 text-3xl font-semibold text-card-foreground">{stat.value}</p>
             <p className="mt-1 text-xs text-muted-foreground">{stat.sub}</p>
           </div>
+        ))}
+      </div>
+
+      {/* BI: Invoice Stage Distribution */}
+      <div className="rounded-xl border border-border bg-card p-6 shadow-card">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="font-sans text-lg font-semibold text-card-foreground">Κατανομή ανά Στάδιο</h2>
+            <p className="text-sm text-muted-foreground">Σύνολο: {total} τιμολόγια</p>
+          </div>
+        </div>
+
+        {total === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <FileText className="mb-3 h-10 w-10 opacity-30" />
+            <p className="text-sm">Δεν υπάρχουν τιμολόγια ακόμα</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+            {/* Bar Chart */}
+            <div className="flex-1">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={stageCounts} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={24}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--secondary))" }} />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                    {stageCounts.map((entry) => (
+                      <Cell key={entry.status} fill={entry.barColor} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Stage breakdown cards */}
+            <div className="grid grid-cols-2 gap-3 lg:w-64 lg:grid-cols-1">
+              {stageCounts.map((stage) => {
+                const Icon = stage.icon;
+                const pct = total > 0 ? Math.round((stage.count / total) * 100) : 0;
+                return (
+                  <div key={stage.status} className="flex items-center gap-3 rounded-lg border border-border bg-secondary/40 px-4 py-3">
+                    <span className={`inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${stage.className}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs text-muted-foreground">{stage.label}</p>
+                      <p className="text-lg font-semibold text-card-foreground leading-tight">{stage.count}</p>
+                    </div>
+                    <span className="text-sm font-medium text-muted-foreground">{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Recent Items */}
-      <div className="rounded-xl border border-border bg-card shadow-card">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="font-sans text-lg font-semibold text-card-foreground">Πρόσφατα Τιμολόγια</h2>
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-            <Plus className="h-4 w-4" />
-            Νέο Email
-          </button>
-        </div>
-        <div className="divide-y divide-border">
-          {recentItems.map((item) => {
-            const status = statusConfig[item.status];
-            const StatusIcon = status.icon;
-            return (
-              <div
-                key={item.id}
-                className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-secondary/50">
-
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-card-foreground">{item.id}</p>
-                    <p className="text-sm text-muted-foreground">{item.sender}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-6">
-                  <span className="hidden text-sm text-muted-foreground md:block">{item.step}</span>
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${status.className}`}>
-                    <StatusIcon className="h-3.5 w-3.5" />
-                    {status.label}
-                  </span>
-                  <span className="hidden text-sm text-muted-foreground lg:block">{item.date}</span>
-                </div>
-              </div>);
-
-          })}
-        </div>
-      </div>
-    </div>);
-
+    </div>
+  );
 }
