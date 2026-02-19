@@ -71,22 +71,17 @@ export default function PipelineView() {
   return (
     <div className="space-y-8">
       {/* Pipeline Flow */}
-      <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-        <h2 className="mb-6 font-sans text-lg font-semibold text-card-foreground">Pipeline Επεξεργασίας</h2>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="rounded-xl border border-border bg-card px-6 py-3 shadow-card">
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="mr-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Pipeline</span>
           {pipelineSteps.map((step, i) => (
-            <div key={step.label} className="flex items-center gap-2">
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-secondary transition-shadow hover:shadow-elevated">
-                  <step.icon className={`h-6 w-6 ${step.color}`} />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-card-foreground">{step.label}</p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
-                </div>
+            <div key={step.label} className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5">
+                <step.icon className={`h-3.5 w-3.5 ${step.color}`} />
+                <span className="text-xs font-medium text-card-foreground">{step.label}</span>
               </div>
               {i < pipelineSteps.length - 1 && (
-                <ArrowRight className="h-4 w-4 text-muted-foreground/40" />
+                <ArrowRight className="h-3 w-3 text-muted-foreground/40" />
               )}
             </div>
           ))}
