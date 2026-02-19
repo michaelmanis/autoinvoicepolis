@@ -72,7 +72,7 @@ serve(async (req) => {
     }
     const base64 = btoa(binary);
 
-    // Determine mime type
+    // Determine mime type and whether it's a PDF
     const ext = file_path.split(".").pop()?.toLowerCase() || "";
     const mimeMap: Record<string, string> = {
       pdf: "application/pdf",
@@ -82,78 +82,107 @@ serve(async (req) => {
       webp: "image/webp",
     };
     const mimeType = mimeMap[ext] || "application/octet-stream";
+    const isPdf = ext === "pdf";
 
-    // Call Skylark Vision API for OCR
-    const skylarkApiKey = Deno.env.get("SKYLARK_API_KEY")!;
-    const aiResponse = await fetch("https://ark.ap-southeast.bytepluses.com/api/v3/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${skylarkApiKey}`,
-        "Content-Type": "application/json",
+    // Build the user content array:
+    // - Skylark only supports image types (PNG/JPEG/WEBP), not PDFs
+    // - For PDFs, fall back to Lovable AI (Gemini) which supports PDF natively
+    // - For images, use Skylark Vision API
+    let aiResponse: Response;
+
+    const extractionTools = [
+      {
+        type: "function",
+        function: {
+          name: "extract_invoice_data",
+          description: "Extract structured invoice data",
+          parameters: {
+            type: "object",
+            properties: {
+              supplier: { type: "string", description: "Supplier/vendor name" },
+              supplier_vat: { type: "string", description: "Supplier VAT/Tax ID" },
+              invoice_number: { type: "string", description: "Invoice number" },
+              invoice_date: { type: "string", description: "Invoice date (YYYY-MM-DD)" },
+              due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
+              amount: { type: "number", description: "Total amount" },
+              currency: { type: "string", description: "Currency code (EUR, USD etc)" },
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    description: { type: "string" },
+                    quantity: { type: "number" },
+                    unit_price: { type: "number" },
+                    total: { type: "number" },
+                  },
+                },
+              },
+              raw_text: { type: "string", description: "Full raw text from the document" },
+            },
+            required: ["supplier"],
+            additionalProperties: false,
+          },
+        },
       },
-      body: JSON.stringify({
-        model: "seed-1-6-flash-250615",
-        messages: [
-          {
-            role: "system",
-            content: `You are an invoice data extraction expert. Extract structured data from invoice images/PDFs.
+    ];
+
+    const systemPrompt = `You are an invoice data extraction expert. Extract structured data from invoice images/PDFs.
 Always respond by calling the extract_invoice_data function with the extracted data.
 If a field is not visible, set it to null. For items, extract each line item with description, quantity, unit_price, and total.
-Dates should be in YYYY-MM-DD format. Amounts should be numbers without currency symbols.`,
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: { url: `data:${mimeType};base64,${base64}` },
-              },
-              {
-                type: "text",
-                text: "Extract all invoice data from this document. Include supplier name, VAT number, invoice number, dates, amounts, and line items.",
-              },
-            ],
-          },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_invoice_data",
-              description: "Extract structured invoice data",
-              parameters: {
-                type: "object",
-                properties: {
-                  supplier: { type: "string", description: "Supplier/vendor name" },
-                  supplier_vat: { type: "string", description: "Supplier VAT/Tax ID" },
-                  invoice_number: { type: "string", description: "Invoice number" },
-                  invoice_date: { type: "string", description: "Invoice date (YYYY-MM-DD)" },
-                  due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
-                  amount: { type: "number", description: "Total amount" },
-                  currency: { type: "string", description: "Currency code (EUR, USD etc)" },
-                  items: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        description: { type: "string" },
-                        quantity: { type: "number" },
-                        unit_price: { type: "number" },
-                        total: { type: "number" },
-                      },
-                    },
-                  },
-                  raw_text: { type: "string", description: "Full raw text from the document" },
-                },
-                required: ["supplier"],
-                additionalProperties: false,
-              },
+Dates should be in YYYY-MM-DD format. Amounts should be numbers without currency symbols.`;
+
+    if (isPdf) {
+      // PDFs → Lovable AI (Gemini) which natively understands PDF
+      const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
+      aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: [
+                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
+                { type: "text", text: "Extract all invoice data from this document. Include supplier name, VAT number, invoice number, dates, amounts, and line items." },
+              ],
             },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_invoice_data" } },
-      }),
-    });
+          ],
+          tools: extractionTools,
+          tool_choice: { type: "function", function: { name: "extract_invoice_data" } },
+        }),
+      });
+    } else {
+      // Images → Skylark Vision API
+      const skylarkApiKey = Deno.env.get("SKYLARK_API_KEY")!;
+      aiResponse = await fetch("https://ark.ap-southeast.bytepluses.com/api/v3/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${skylarkApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "seed-1-6-flash-250615",
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: [
+                { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
+                { type: "text", text: "Extract all invoice data from this document. Include supplier name, VAT number, invoice number, dates, amounts, and line items." },
+              ],
+            },
+          ],
+          tools: extractionTools,
+          tool_choice: { type: "function", function: { name: "extract_invoice_data" } },
+        }),
+      });
+    }
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
