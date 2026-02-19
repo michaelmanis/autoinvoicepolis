@@ -24,7 +24,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     // Create client with user's auth
     const supabaseUser = createClient(supabaseUrl, anonKey, {
@@ -84,15 +83,16 @@ serve(async (req) => {
     };
     const mimeType = mimeMap[ext] || "application/octet-stream";
 
-    // Call Lovable AI with vision for OCR
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call Skylark Vision API for OCR
+    const skylarkApiKey = Deno.env.get("SKYLARK_API_KEY")!;
+    const aiResponse = await fetch("https://ark.ap-southeast.bytepluses.com/api/v3/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
+        Authorization: `Bearer ${skylarkApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "seed-1-6-flash-250615",
         messages: [
           {
             role: "system",
