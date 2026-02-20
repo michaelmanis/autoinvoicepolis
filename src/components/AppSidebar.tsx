@@ -123,26 +123,29 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
       )}
     >
       {/* Header */}
-      <div className={cn(
-        "flex items-center border-b border-sidebar-border transition-all duration-300",
-        collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3",
-      )}>
-        {!collapsed && (
-          <img src={polisLogo} alt="Polis Analytica" className="h-14 w-auto object-contain" />
-        )}
-        {collapsed && (
+      {collapsed ? (
+        <div className="flex flex-col items-center border-b border-sidebar-border py-3 gap-2">
           <img src={consultingIcon} alt="Polis Analytica" className="h-9 w-9 object-contain" />
-        )}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed
-            ? <ChevronRight className="h-4 w-4" />
-            : <ChevronLeft  className="h-4 w-4" />}
-        </button>
-      </div>
+          <button
+            onClick={() => setCollapsed(false)}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            aria-label="Expand sidebar"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-border">
+          <img src={polisLogo} alt="Polis Analytica" className="h-14 w-auto object-contain" />
+          <button
+            onClick={() => setCollapsed(true)}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 space-y-0.5 px-2 py-4">
