@@ -1,38 +1,22 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, FileText, Clock, Eye, FolderCheck } from "lucide-react";
+import { CheckCircle2, XCircle, FileText, Clock, Eye } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
+import { useAccountantMutation } from "@/hooks/useInvoices";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Invoice } from "@/types/invoice";
 
-type Invoice = {
-  id: string;
-  supplier: string | null;
-  supplier_vat: string | null;
-  amount: number | null;
-  currency: string | null;
-  invoice_number: string | null;
-  invoice_date: string | null;
-  due_date: string | null;
-  items: any;
-  raw_ocr_text: string | null;
-  status: string;
-  file_url: string | null;
-  file_name: string | null;
-  created_at: string;
-  updated_at: string;
-  project_id: string | null;
-};
+const INVALIDATE_KEYS = [["accountant-invoices"], ["invoices"]];
 
 export default function AccountantPage() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["accountant-invoices"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Invoice[]> => {
       const { data, error } = await supabase
         .from("invoices")
         .select("*")
@@ -43,47 +27,7 @@ export default function AccountantPage() {
     },
   });
 
-  const approveMutation = useMutation({
-    mutationFn: async ({ id, approved }: { id: string; approved: boolean }) => {
-      if (approved) {
-        // Call archive-invoice edge function — it approves AND moves to monthly folder
-        const { data: { session } } = await supabase.auth.getSession();
-        const resp = await supabase.functions.invoke("archive-invoice", {
-          body: { invoice_id: id },
-          headers: session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : undefined,
-        });
-        if (resp.error) throw resp.error;
-        return { approved, monthFolder: resp.data?.month_folder };
-      } else {
-        // Reject: return to draft
-        const { error } = await supabase
-          .from("invoices")
-          .update({ status: "draft" })
-          .eq("id", id);
-        if (error) throw error;
-        return { approved };
-      }
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["accountant-invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      if (result.approved) {
-        toast({
-          title: "✅ Εγκρίθηκε & αρχειοθετήθηκε!",
-          description: result.monthFolder
-            ? `Αρχειοθετήθηκε στον φάκελο: ${result.monthFolder}`
-            : "Το τιμολόγιο εγκρίθηκε από λογιστή.",
-        });
-      } else {
-        toast({ title: "↩️ Επιστράφηκε σε Draft" });
-      }
-    },
-    onError: (err: any) => {
-      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
-    },
-  });
+  const approveMutation = useAccountantMutation(INVALIDATE_KEYS);
 
   if (selectedInvoice) {
     return (
@@ -136,6 +80,7 @@ export default function AccountantPage() {
                     <p className="text-sm text-muted-foreground">{inv.supplier || "Άγνωστος προμηθευτής"}</p>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-3">
                   {inv.amount != null && (
                     <span className="text-sm font-medium text-card-foreground">
@@ -151,8 +96,7 @@ export default function AccountantPage() {
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="ghost" size="icon"
                       onClick={() => approveMutation.mutate({ id: inv.id, approved: true })}
                       disabled={approveMutation.isPending}
                       title="Έγκριση"
@@ -160,8 +104,7 @@ export default function AccountantPage() {
                       <CheckCircle2 className="h-4 w-4 text-success" />
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="ghost" size="icon"
                       onClick={() => approveMutation.mutate({ id: inv.id, approved: false })}
                       disabled={approveMutation.isPending}
                       title="Απόρριψη"
