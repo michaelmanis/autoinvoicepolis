@@ -1,11 +1,16 @@
-import { useState } from "react";
-import { LayoutDashboard, FileText, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, LogOut, FolderOpen, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
   { icon: FileText, label: "Τιμολόγια", id: "invoices" },
+  { icon: FolderOpen, label: "Projects", id: "projects" },
+];
+
+const accountantNavItems = [
+  { icon: UserCheck, label: "Έγκριση Λογιστή", id: "accountant" },
 ];
 
 interface AppSidebarProps {
@@ -16,6 +21,9 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ collapsed = false, activeView, onNavigate }: AppSidebarProps) {
   const { signOut, user } = useAuth();
+  const { isAccountant, isAdmin } = useUserRole();
+
+  const allItems = [...navItems, ...(isAccountant || isAdmin ? accountantNavItems : [])];
 
   return (
     <aside className={cn(
@@ -31,7 +39,7 @@ export default function AppSidebar({ collapsed = false, activeView, onNavigate }
       </div>
 
       <nav className="flex-1 space-y-1 px-2 py-4">
-        {navItems.map((item) => (
+        {allItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onNavigate(item.id)}
@@ -51,6 +59,11 @@ export default function AppSidebar({ collapsed = false, activeView, onNavigate }
       <div className="space-y-2 border-t border-sidebar-border px-2 py-4">
         {!collapsed && user && (
           <p className="truncate px-3 text-xs text-sidebar-foreground/50">{user.email}</p>
+        )}
+        {!collapsed && (isAccountant || isAdmin) && (
+          <p className="truncate px-3 text-xs font-medium text-warning">
+            {isAdmin ? "👑 Admin" : "📋 Λογιστής"}
+          </p>
         )}
         <button
           onClick={signOut}

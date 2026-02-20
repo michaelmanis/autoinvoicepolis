@@ -49,6 +49,8 @@ const statusConfig: Record<string, { label: string; className: string; icon: any
   review: { label: "Αναμονή", className: "bg-warning/10 text-warning", icon: AlertCircle },
   approved: { label: "Εγκρίθηκε", className: "bg-success/10 text-success", icon: CheckCircle2 },
   submitted: { label: "Υποβλήθηκε", className: "bg-success/10 text-success", icon: CheckCircle2 },
+  accountant_pending: { label: "Αναμονή Λογιστή", className: "bg-warning/10 text-warning", icon: AlertCircle },
+  accountant_approved: { label: "Εγκρίθηκε (Λογιστής)", className: "bg-success/10 text-success", icon: CheckCircle2 },
   error: { label: "Σφάλμα", className: "bg-destructive/10 text-destructive", icon: AlertCircle },
 };
 
