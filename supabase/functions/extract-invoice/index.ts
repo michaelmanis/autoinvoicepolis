@@ -45,11 +45,13 @@ serve(async (req) => {
       });
     }
 
-    // Download the file from storage
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
-      .from("invoices")
-      .download(file_path);
+
+    // Download file + pre-generate signed URL in parallel
+    const [{ data: fileData, error: downloadError }, { data: signedUrlData }] = await Promise.all([
+      supabaseAdmin.storage.from("invoices").download(file_path),
+      supabaseAdmin.storage.from("invoices").createSignedUrl(file_path, 60 * 60 * 24 * 7),
+    ]);
 
     if (downloadError || !fileData) {
       console.error("Download error:", downloadError);
@@ -59,15 +61,9 @@ serve(async (req) => {
       });
     }
 
-    // Convert file to base64
+    // Convert file to base64 using native Uint8Array + btoa
     const arrayBuffer = await fileData.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = "";
-    const chunkSize = 8192;
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-    }
-    const base64 = btoa(binary);
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
     const ext = file_path.split(".").pop()?.toLowerCase() || "";
     const mimeMap: Record<string, string> = {
@@ -229,11 +225,6 @@ If a field is not visible for a given invoice, set it to null.`;
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Get signed URL (shared across all invoices from this file)
-    const { data: signedUrlData } = await supabaseAdmin.storage
-      .from("invoices")
-      .createSignedUrl(file_path, 60 * 60 * 24 * 7);
 
     // Insert all invoices
     const rows = invoiceList.map((inv: Record<string, unknown>) => ({
