@@ -376,7 +376,7 @@ export default function InvoicesPage() {
                               {status.label}
                             </span>
                             <div className="flex gap-1">
-                              {inv.status !== "accountant_pending" && inv.status !== "accountant_approved" && (
+                              {inv.status !== "accountant_pending" && inv.status !== "accountant_approved" && inv.status !== "submitted" && (
                                 <Button variant="ghost" size="icon" onClick={() => setSelectedInvoice(inv)}>
                                   <Eye className="h-4 w-4" />
                                 </Button>
