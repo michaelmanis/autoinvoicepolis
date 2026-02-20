@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import {
   Select,
   SelectContent,
@@ -448,13 +448,6 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
             </div>
           )}
 
-          {/* OCR raw text */}
-          {invoice.raw_ocr_text && (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-              <h3 className="mb-2 font-medium text-card-foreground">OCR Κείμενο</h3>
-              <Textarea value={invoice.raw_ocr_text} readOnly rows={6} className="text-xs" />
-            </div>
-          )}
         </div>
       </div>
     </div>
