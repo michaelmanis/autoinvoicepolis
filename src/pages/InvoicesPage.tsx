@@ -316,56 +316,86 @@ export default function InvoicesPage() {
           <p className="text-sm text-muted-foreground/70">Ανεβάστε ένα PDF ή εικόνα για να ξεκινήσετε</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card shadow-card">
-          <div className="divide-y divide-border">
-            {invoices.map((inv) => {
-              const status = statusConfig[inv.status] || statusConfig.draft;
-              const StatusIcon = status.icon;
-              return (
-                <div
-                  key={inv.id}
-                  className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-secondary/50"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-card-foreground">
-                        {inv.invoice_number || inv.file_name || "Χωρίς αριθμό"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{inv.supplier || "Άγνωστος προμηθευτής"}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    {inv.amount != null && (
-                      <span className="text-sm font-medium text-card-foreground">
-                        {inv.amount.toLocaleString("el-GR", { minimumFractionDigits: 2 })} {inv.currency || "€"}
-                      </span>
-                    )}
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${status.className}`}
-                    >
-                      <StatusIcon className="h-3.5 w-3.5" />
-                      {status.label}
-                    </span>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setSelectedInvoice(inv)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteMutation.mutate(inv.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+        <div className="space-y-4">
+          {(() => {
+            // Group invoices by upload date (created_at date)
+            const groups: Record<string, Invoice[]> = {};
+            invoices.forEach((inv) => {
+              const dateKey = new Date(inv.created_at).toLocaleDateString("el-GR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              });
+              if (!groups[dateKey]) groups[dateKey] = [];
+              groups[dateKey].push(inv);
+            });
+
+            return Object.entries(groups).map(([dateLabel, groupInvoices]) => (
+              <div key={dateLabel}>
+                <div className="flex items-center gap-3 mb-2 px-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {dateLabel}
+                  </span>
+                  <span className="text-xs text-muted-foreground/60 bg-muted rounded-full px-2 py-0.5">
+                    {groupInvoices.length} τιμολόγ{groupInvoices.length === 1 ? "ιο" : "ια"}
+                  </span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="rounded-xl border border-border bg-card shadow-card">
+                  <div className="divide-y divide-border">
+                    {groupInvoices.map((inv) => {
+                      const status = statusConfig[inv.status] || statusConfig.draft;
+                      const StatusIcon = status.icon;
+                      return (
+                        <div
+                          key={inv.id}
+                          className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-secondary/50"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                              <FileText className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-card-foreground">
+                                {inv.invoice_number || inv.file_name || "Χωρίς αριθμό"}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{inv.supplier || "Άγνωστος προμηθευτής"}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            {inv.amount != null && (
+                              <span className="text-sm font-medium text-card-foreground">
+                                {inv.amount.toLocaleString("el-GR", { minimumFractionDigits: 2 })} {inv.currency || "€"}
+                              </span>
+                            )}
+                            <span
+                              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${status.className}`}
+                            >
+                              <StatusIcon className="h-3.5 w-3.5" />
+                              {status.label}
+                            </span>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setSelectedInvoice(inv)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => deleteMutation.mutate(inv.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            ));
+          })()}
         </div>
       )}
     </div>
