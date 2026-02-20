@@ -1,125 +1,49 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle2,
-  XCircle,
-  FileText,
-  Clock,
-  Eye,
-  ChevronDown,
-  ChevronRight,
-  FolderOpen,
-  Folder,
-  Euro,
+  CheckCircle2, XCircle, FileText, Clock, Eye,
+  ChevronDown, ChevronRight, FolderOpen, Folder, Euro,
 } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
+import { useAccountantFolderInvoices, useAccountantMutation } from "@/hooks/useInvoices";
+import { getMonthKey, formatMonthKey, type Invoice } from "@/types/invoice";
 
-type Invoice = {
-  id: string;
-  supplier: string | null;
-  supplier_vat: string | null;
-  amount: number | null;
-  currency: string | null;
-  invoice_number: string | null;
-  invoice_date: string | null;
-  due_date: string | null;
-  items: any;
-  raw_ocr_text: string | null;
-  status: string;
-  file_url: string | null;
-  file_name: string | null;
-  created_at: string;
-  updated_at: string;
-  project_id: string | null;
-};
+const STATUS_BADGE = {
+  accountant_approved: (
+    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+      <CheckCircle2 className="h-3 w-3" />
+      Διασταυρώθηκε
+    </span>
+  ),
+  accountant_pending: (
+    <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
+      <Clock className="h-3 w-3" />
+      Αναμονή Ελέγχου
+    </span>
+  ),
+} as const;
 
-const MONTH_NAMES: Record<string, string> = {
-  "01": "Ιανουάριος", "02": "Φεβρουάριος", "03": "Μάρτιος",
-  "04": "Απρίλιος", "05": "Μάιος", "06": "Ιούνιος",
-  "07": "Ιούλιος", "08": "Αύγουστος", "09": "Σεπτέμβριος",
-  "10": "Οκτώβριος", "11": "Νοέμβριος", "12": "Δεκέμβριος",
-};
-
-function getMonthKey(invoice: Invoice): string {
-  const d = invoice.invoice_date || invoice.created_at;
-  if (!d) return "Χωρίς ημερομηνία";
-  const date = new Date(d);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
-function formatMonthKey(key: string): string {
-  const [year, month] = key.split("-");
-  return `${MONTH_NAMES[month] || month} ${year}`;
-}
+const INVALIDATE_KEYS = [
+  ["accountant-folder-invoices"],
+  ["accountant-invoices"],
+  ["invoices"],
+];
 
 export default function AccountantFolderPage() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
 
-  const { data: invoices, isLoading } = useQuery({
-    queryKey: ["accountant-folder-invoices"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("*")
-        .in("status", ["accountant_pending", "accountant_approved"])
-        .order("invoice_date", { ascending: false, nullsFirst: false });
-      if (error) throw error;
-      return data as Invoice[];
-    },
-  });
+  const { data: invoices, isLoading } = useAccountantFolderInvoices();
+  const approveMutation = useAccountantMutation(INVALIDATE_KEYS);
 
-  const approveMutation = useMutation({
-    mutationFn: async ({ id, approved }: { id: string; approved: boolean }) => {
-      if (approved) {
-        const { data: { session } } = await supabase.auth.getSession();
-        const resp = await supabase.functions.invoke("archive-invoice", {
-          body: { invoice_id: id },
-          headers: session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : undefined,
-        });
-        if (resp.error) throw resp.error;
-        return { approved, monthFolder: resp.data?.month_folder };
-      } else {
-        const { error } = await supabase
-          .from("invoices")
-          .update({ status: "draft" })
-          .eq("id", id);
-        if (error) throw error;
-        return { approved };
-      }
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["accountant-folder-invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["accountant-invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      if (result.approved) {
-        toast({ title: "✅ Εγκρίθηκε από λογιστή!" });
-      } else {
-        toast({ title: "↩️ Επιστράφηκε σε Draft" });
-      }
-    },
-    onError: (err: any) => {
-      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
-    },
-  });
-
-  const toggleFolder = (key: string) => {
+  const toggleFolder = (key: string) =>
     setOpenFolders((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
-  };
 
   if (selectedInvoice) {
     return (
@@ -134,32 +58,13 @@ export default function AccountantFolderPage() {
     );
   }
 
-  // Group invoices by month
-  const grouped: Record<string, Invoice[]> = {};
-  for (const inv of invoices ?? []) {
+  // Group by month
+  const grouped = (invoices ?? []).reduce<Record<string, Invoice[]>>((acc, inv) => {
     const key = getMonthKey(inv);
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(inv);
-  }
-
+    (acc[key] ??= []).push(inv);
+    return acc;
+  }, {});
   const sortedKeys = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-
-  const statusBadge = (status: string) => {
-    if (status === "accountant_approved") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
-          <CheckCircle2 className="h-3 w-3" />
-          Διασταυρώθηκε
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
-        <Clock className="h-3 w-3" />
-        Αναμονή Ελέγχου
-      </span>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -193,16 +98,14 @@ export default function AccountantFolderPage() {
 
             return (
               <div key={monthKey} className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
-                {/* Folder header */}
                 <button
                   className="flex w-full items-center gap-3 px-5 py-4 hover:bg-secondary/40 transition-colors text-left"
                   onClick={() => toggleFolder(monthKey)}
                 >
-                  {isOpen ? (
-                    <FolderOpen className="h-5 w-5 text-primary shrink-0" />
-                  ) : (
-                    <Folder className="h-5 w-5 text-primary/70 shrink-0" />
-                  )}
+                  {isOpen
+                    ? <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                    : <Folder className="h-5 w-5 text-primary/70 shrink-0" />
+                  }
                   <div className="flex-1">
                     <p className="font-semibold text-card-foreground">{formatMonthKey(monthKey)}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -223,15 +126,13 @@ export default function AccountantFolderPage() {
                         {pending}
                       </span>
                     )}
-                    {isOpen ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
+                    {isOpen
+                      ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      : <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    }
                   </div>
                 </button>
 
-                {/* Invoice list */}
                 {isOpen && (
                   <div className="border-t border-border divide-y divide-border">
                     {monthInvoices.map((inv) => (
@@ -253,13 +154,14 @@ export default function AccountantFolderPage() {
                             </p>
                           </div>
                         </div>
+
                         <div className="flex items-center gap-3">
                           {inv.amount != null && (
                             <span className="text-sm font-medium text-card-foreground">
                               {inv.amount.toLocaleString("el-GR", { minimumFractionDigits: 2 })} {inv.currency || "€"}
                             </span>
                           )}
-                          {statusBadge(inv.status)}
+                          {STATUS_BADGE[inv.status as keyof typeof STATUS_BADGE]}
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedInvoice(inv)}>
                               <Eye className="h-4 w-4" />
@@ -267,9 +169,7 @@ export default function AccountantFolderPage() {
                             {inv.status === "accountant_pending" && (
                               <>
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
+                                  variant="ghost" size="icon" className="h-8 w-8"
                                   onClick={() => approveMutation.mutate({ id: inv.id, approved: true })}
                                   disabled={approveMutation.isPending}
                                   title="Έγκριση"
@@ -277,9 +177,7 @@ export default function AccountantFolderPage() {
                                   <CheckCircle2 className="h-4 w-4 text-success" />
                                 </Button>
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
+                                  variant="ghost" size="icon" className="h-8 w-8"
                                   onClick={() => approveMutation.mutate({ id: inv.id, approved: false })}
                                   disabled={approveMutation.isPending}
                                   title="Απόρριψη"
