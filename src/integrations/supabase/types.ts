@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      erp_settings: {
+        Row: {
+          api_key: string
+          branch_id: string
+          company_id: string
+          endpoint_url: string
+          erp_type: string
+          id: string
+          is_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string
+          branch_id?: string
+          company_id?: string
+          endpoint_url?: string
+          erp_type?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          branch_id?: string
+          company_id?: string
+          endpoint_url?: string
+          erp_type?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoice_actions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          invoice_id: string
+          metadata: Json
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          metadata?: Json
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          metadata?: Json
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_actions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number | null

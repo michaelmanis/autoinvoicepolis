@@ -11,11 +11,13 @@ import {
 import {
   ArrowLeft, Save, CheckCircle2, Database, Loader2, FileText,
   ExternalLink, ChevronLeft, ChevronRight, UserCheck, FolderOpen, FolderCheck,
+  History, Clock,
 } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import type { Invoice } from "@/types/invoice";
+import { useInvoiceActions, useLogInvoiceAction, ACTION_LABELS } from "@/hooks/useInvoiceActions";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -195,6 +197,64 @@ function InvoiceFormFields({
   );
 }
 
+// ─── Audit Timeline ───────────────────────────────────────────────────────────
+
+function AuditTimeline({ invoiceId }: { invoiceId: string }) {
+  const { data: actions = [], isLoading } = useInvoiceActions(invoiceId);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+        <h3 className="font-medium text-card-foreground mb-4 flex items-center gap-2">
+          <History className="h-4 w-4 text-muted-foreground" />
+          Ιστορικό Ενεργειών
+        </h3>
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+      <h3 className="font-medium text-card-foreground mb-4 flex items-center gap-2">
+        <History className="h-4 w-4 text-muted-foreground" />
+        Ιστορικό Ενεργειών
+        {actions.length > 0 && (
+          <span className="ml-auto text-xs text-muted-foreground">{actions.length} ενέργειες</span>
+        )}
+      </h3>
+      {actions.length === 0 ? (
+        <div className="flex flex-col items-center py-6 gap-2 text-muted-foreground/50">
+          <Clock className="h-8 w-8" />
+          <p className="text-xs">Δεν υπάρχουν καταγεγραμμένες ενέργειες</p>
+        </div>
+      ) : (
+        <ol className="relative border-l border-border ml-2 space-y-4">
+          {actions.map((a) => {
+            const cfg = ACTION_LABELS[a.action] ?? { label: a.action, color: "text-muted-foreground" };
+            return (
+              <li key={a.id} className="ml-4">
+                <div className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-border bg-card" />
+                <p className={`text-sm font-medium ${cfg.color}`}>{cfg.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {a.user_email ?? "Σύστημα"}
+                  {" · "}
+                  {new Date(a.created_at).toLocaleString("el-GR", {
+                    day: "2-digit", month: "short", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  })}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface InvoiceDetailProps {
@@ -205,6 +265,7 @@ interface InvoiceDetailProps {
 
 export default function InvoiceDetail({ invoice, onBack, isAccountant = false }: InvoiceDetailProps) {
   const { toast } = useToast();
+  const logAction = useLogInvoiceAction();
 
   const [form, setForm] = useState<FormState>({
     supplier: invoice.supplier ?? "",
@@ -256,10 +317,11 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
 
   const handleSave = () => updateMutation.mutate(form);
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     const updated = { ...form, status: "approved" };
     patchForm({ status: "approved" });
     updateMutation.mutate(updated);
+    await logAction.mutateAsync({ invoiceId: invoice.id, action: "user_approved" });
   };
 
   const [erpSending, setErpSending] = useState(false);
@@ -278,6 +340,7 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
         title: "Στάλθηκε στο ERP!",
         description: monthFolder ? `Αρχειοθετήθηκε στον φάκελο: ${monthFolder}` : "Αναμένει επιβεβαίωση λογιστή.",
       });
+      await logAction.mutateAsync({ invoiceId: invoice.id, action: "sent_to_erp", metadata: { month_folder: monthFolder } });
     } catch (err: any) {
       toast({ title: "Σφάλμα ERP", description: err.message, variant: "destructive" });
     } finally {
@@ -298,8 +361,9 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
       patchForm({ status: "accountant_approved" });
       toast({
         title: "✅ Εγκρίθηκε & αρχειοθετήθηκε!",
-        description: resp.data?.month_folder ? `Αρχειοθετήθηκε στον φάκελο: ${resp.data.month_folder}` : "Το τιμολόγιο εγκρίθηκε.",
+        description: resp.data?.month_folder ? `Φάκελος: ${resp.data.month_folder}` : "Το τιμολόγιο εγκρίθηκε.",
       });
+      await logAction.mutateAsync({ invoiceId: invoice.id, action: "accountant_approved" });
     } catch (err: any) {
       toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
     } finally {
@@ -376,6 +440,8 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
               <p className="text-sm">Δεν υπάρχει διαθέσιμη προεπισκόπηση αρχείου</p>
             </div>
           )}
+          {/* Audit timeline in left column */}
+          <AuditTimeline invoiceId={invoice.id} />
         </div>
 
         {/* Right: Form + Items */}

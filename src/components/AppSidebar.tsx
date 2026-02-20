@@ -3,7 +3,7 @@ import polisLogo from "@/assets/polis-logo.png";
 import consultingIcon from "@/assets/consulting.png";
 import {
   LayoutDashboard, FileText, LogOut, FolderOpen,
-  UserCheck, FolderCheck, ChevronLeft, ChevronRight,
+  UserCheck, FolderCheck, ChevronLeft, ChevronRight, Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +25,10 @@ const NAV_ITEMS = [
 
 const ACCOUNTANT_ITEMS = [
   { icon: UserCheck, label: "Έγκριση Λογιστή", id: "accountant" },
+];
+
+const ADMIN_ITEMS = [
+  { icon: Settings, label: "Ρυθμίσεις", id: "settings" },
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -113,6 +117,7 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
   const allItems = [
     ...NAV_ITEMS,
     ...(isAccountant || isAdmin ? ACCOUNTANT_ITEMS : []),
+    ...(isAdmin ? ADMIN_ITEMS : []),
   ];
 
   return (
