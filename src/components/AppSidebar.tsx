@@ -135,8 +135,8 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
           </button>
         </div>
       ) : (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-border">
-          <img src={polisLogo} alt="Polis Analytica" className="h-14 w-auto object-contain" />
+        <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
+          <img src={polisLogo} alt="Polis Analytica" className="h-16 w-auto object-contain mx-auto" />
           <button
             onClick={() => setCollapsed(true)}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
