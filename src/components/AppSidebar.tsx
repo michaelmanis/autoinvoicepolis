@@ -1,4 +1,5 @@
 import { useState } from "react";
+import polisLogo from "@/assets/polis-logo.png";
 import {
   LayoutDashboard, FileText, LogOut, FolderOpen,
   UserCheck, FolderCheck, ChevronLeft, ChevronRight,
@@ -123,12 +124,18 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
       {/* Header */}
       <div className={cn(
         "flex items-center border-b border-sidebar-border transition-all duration-300",
-        collapsed ? "justify-center px-2 py-5" : "justify-between px-4 py-5",
+        collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3",
       )}>
         {!collapsed && (
-          <span className="text-sm font-semibold tracking-wide text-sidebar-foreground truncate">
-            Invoice Automation
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <img src={polisLogo} alt="Polis Analytica" className="h-10 w-auto object-contain shrink-0" />
+            <span className="text-sm font-semibold tracking-wide text-sidebar-foreground truncate">
+              DocuHandler
+            </span>
+          </div>
+        )}
+        {collapsed && (
+          <img src={polisLogo} alt="Polis Analytica" className="h-8 w-auto object-contain" />
         )}
         <button
           onClick={() => setCollapsed((c) => !c)}
