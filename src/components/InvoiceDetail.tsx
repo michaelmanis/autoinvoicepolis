@@ -1,12 +1,31 @@
 import { useState, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, CheckCircle2, Database, Loader2, FileText, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft,
+  Save,
+  CheckCircle2,
+  Database,
+  Loader2,
+  FileText,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  UserCheck,
+  FolderOpen,
+} from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -16,9 +35,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 interface InvoiceDetailProps {
   invoice: any;
   onBack: () => void;
+  isAccountant?: boolean;
 }
 
-export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
+export default function InvoiceDetail({ invoice, onBack, isAccountant = false }: InvoiceDetailProps) {
   const { toast } = useToast();
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
@@ -26,6 +46,7 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
     setNumPages(numPages);
     setPageNumber(1);
   }, []);
+
   const [form, setForm] = useState({
     supplier: invoice.supplier || "",
     supplier_vat: invoice.supplier_vat || "",
@@ -35,9 +56,20 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
     amount: invoice.amount?.toString() || "",
     currency: invoice.currency || "EUR",
     status: invoice.status || "draft",
+    project_id: invoice.project_id || "",
   });
 
   const items = Array.isArray(invoice.items) ? invoice.items : [];
+
+  // Fetch projects for the dropdown
+  const { data: projects } = useQuery({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projects").select("id, name").order("name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: async (data: typeof form) => {
@@ -52,6 +84,7 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
           amount: data.amount ? parseFloat(data.amount) : null,
           currency: data.currency,
           status: data.status,
+          project_id: data.project_id || null,
         })
         .eq("id", invoice.id);
       if (error) throw error;
@@ -80,19 +113,25 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
       await new Promise((r) => setTimeout(r, 1500));
       const { error } = await supabase
         .from("invoices")
-        .update({ status: "submitted" })
+        .update({ status: "accountant_pending" })
         .eq("id", invoice.id);
       if (error) throw error;
-      setForm((prev) => ({ ...prev, status: "submitted" }));
+      setForm((prev) => ({ ...prev, status: "accountant_pending" }));
       toast({
         title: "Στάλθηκε στο ERP!",
-        description: `Το τιμολόγιο ${form.invoice_number || invoice.id} καταχωρήθηκε επιτυχώς. (Mock)`,
+        description: `Αναμένει επιβεβαίωση λογιστή.`,
       });
     } catch (err: any) {
       toast({ title: "Σφάλμα ERP", description: err.message, variant: "destructive" });
     } finally {
       setErpSending(false);
     }
+  };
+
+  const handleAccountantApprove = async () => {
+    const updated = { ...form, status: "accountant_approved" };
+    setForm(updated);
+    updateMutation.mutate(updated);
   };
 
   const fileUrl = invoice.file_url;
@@ -111,24 +150,52 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
           <h2 className="text-lg font-semibold text-foreground">
             {form.invoice_number || "Νέο Τιμολόγιο"}
           </h2>
-          <p className="text-sm text-muted-foreground">Επεξεργασία & Έλεγχος</p>
+          <p className="text-sm text-muted-foreground">
+            {isAccountant ? "Επιβεβαίωση Λογιστή" : "Επεξεργασία & Έλεγχος"}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSave} disabled={updateMutation.isPending}>
-            <Save className="mr-2 h-4 w-4" />
-            Αποθήκευση
-          </Button>
-          {form.status === "draft" && (
+        <div className="flex gap-2 flex-wrap justify-end">
+          {!isAccountant && (
+            <Button variant="outline" onClick={handleSave} disabled={updateMutation.isPending}>
+              <Save className="mr-2 h-4 w-4" />
+              Αποθήκευση
+            </Button>
+          )}
+          {!isAccountant && form.status === "draft" && (
             <Button onClick={handleApprove} disabled={updateMutation.isPending}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
               Έγκριση
             </Button>
           )}
-          {form.status === "approved" && (
-            <Button onClick={handleSendToERP} disabled={erpSending} className="bg-success hover:bg-success/90 text-success-foreground">
-              {erpSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
+          {!isAccountant && form.status === "approved" && (
+            <Button
+              onClick={handleSendToERP}
+              disabled={erpSending}
+              className="bg-success hover:bg-success/90 text-success-foreground"
+            >
+              {erpSending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="mr-2 h-4 w-4" />
+              )}
               Αποστολή σε ERP
             </Button>
+          )}
+          {(form.status === "accountant_pending" || isAccountant) && form.status === "accountant_pending" && (
+            <Button
+              onClick={handleAccountantApprove}
+              disabled={updateMutation.isPending}
+              className="bg-success hover:bg-success/90 text-success-foreground"
+            >
+              <UserCheck className="mr-2 h-4 w-4" />
+              Έγκριση Λογιστή
+            </Button>
+          )}
+          {form.status === "accountant_approved" && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-4 py-2 text-sm font-medium text-success">
+              <UserCheck className="h-4 w-4" />
+              Εγκρίθηκε από Λογιστή
+            </span>
           )}
           {form.status === "submitted" && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-4 py-2 text-sm font-medium text-success">
@@ -174,9 +241,14 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
                       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 p-8 text-center">
                         <FileText className="h-12 w-12 text-muted-foreground opacity-40" />
                         <p className="text-sm text-muted-foreground">Αδυναμία φόρτωσης PDF.</p>
-                        <a href={fileUrl} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                          <ExternalLink className="h-4 w-4" />Άνοιγμα σε νέα καρτέλα
+                        <a
+                          href={fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Άνοιγμα σε νέα καρτέλα
                         </a>
                       </div>
                     }
@@ -185,11 +257,23 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
                   </Document>
                   {numPages > 1 && (
                     <div className="flex items-center gap-3 py-3 border-t border-border w-full justify-center">
-                      <Button variant="ghost" size="icon" onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                        disabled={pageNumber <= 1}
+                      >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <span className="text-sm text-muted-foreground">{pageNumber} / {numPages}</span>
-                      <Button variant="ghost" size="icon" onClick={() => setPageNumber(p => Math.min(numPages, p + 1))} disabled={pageNumber >= numPages}>
+                      <span className="text-sm text-muted-foreground">
+                        {pageNumber} / {numPages}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setPageNumber((p) => Math.min(numPages, p + 1))}
+                        disabled={pageNumber >= numPages}
+                      >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -221,28 +305,92 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Προμηθευτής</Label>
-                <Input value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} />
+                <Input
+                  value={form.supplier}
+                  onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+                  readOnly={isAccountant}
+                />
               </div>
               <div className="space-y-2">
                 <Label>ΑΦΜ Προμηθευτή</Label>
-                <Input value={form.supplier_vat} onChange={(e) => setForm({ ...form, supplier_vat: e.target.value })} />
+                <Input
+                  value={form.supplier_vat}
+                  onChange={(e) => setForm({ ...form, supplier_vat: e.target.value })}
+                  readOnly={isAccountant}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Αριθμός Τιμολογίου</Label>
-                <Input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} />
+                <Input
+                  value={form.invoice_number}
+                  onChange={(e) => setForm({ ...form, invoice_number: e.target.value })}
+                  readOnly={isAccountant}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Ποσό</Label>
-                <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  readOnly={isAccountant}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Ημ. Τιμολογίου</Label>
-                <Input type="date" value={form.invoice_date} onChange={(e) => setForm({ ...form, invoice_date: e.target.value })} />
+                <Input
+                  type="date"
+                  value={form.invoice_date}
+                  onChange={(e) => setForm({ ...form, invoice_date: e.target.value })}
+                  readOnly={isAccountant}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Ημ. Λήξης</Label>
-                <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+                <Input
+                  type="date"
+                  value={form.due_date}
+                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                  readOnly={isAccountant}
+                />
               </div>
+              {/* Project selector */}
+              {!isAccountant && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="flex items-center gap-1.5">
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Project
+                  </Label>
+                  <Select
+                    value={form.project_id || "none"}
+                    onValueChange={(v) => setForm({ ...form, project_id: v === "none" ? "" : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Χωρίς project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— Χωρίς project —</SelectItem>
+                      {(projects ?? []).map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {isAccountant && form.project_id && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="flex items-center gap-1.5">
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Project
+                  </Label>
+                  <p className="text-sm text-card-foreground font-medium">
+                    {(projects ?? []).find((p: any) => p.id === form.project_id)?.name ?? "—"}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -252,10 +400,14 @@ export default function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
               <h3 className="mb-4 font-medium text-card-foreground">Είδη ({items.length})</h3>
               <div className="space-y-3">
                 {items.map((item: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg bg-secondary p-3 text-sm">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-lg bg-secondary p-3 text-sm"
+                  >
                     <span className="flex-1 text-card-foreground">{item.description || "—"}</span>
                     <span className="text-muted-foreground">
-                      {item.quantity || 0} × {item.unit_price?.toFixed(2) || "0.00"} = {item.total?.toFixed(2) || "0.00"}
+                      {item.quantity || 0} × {item.unit_price?.toFixed(2) || "0.00"} ={" "}
+                      {item.total?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                 ))}

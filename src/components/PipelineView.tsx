@@ -1,4 +1,4 @@
-import { Mail, ScanText, Truck, FileText, Database, Clock, CheckCircle2, AlertCircle, Plus, ArrowRight } from "lucide-react";
+import { Mail, ScanText, FileText, Database, Clock, CheckCircle2, AlertCircle, ArrowRight, UserCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -13,11 +13,12 @@ import {
 } from "recharts";
 
 const pipelineSteps = [
-  { icon: Mail, label: "Email", description: "Λήψη email", color: "text-info" },
-  { icon: ScanText, label: "OCR", description: "Αναγνώριση", color: "text-accent" },
-  { icon: Truck, label: "Shipment", description: "Draft αποστολής", color: "text-primary" },
-  { icon: FileText, label: "Invoice", description: "Draft τιμολογίου", color: "text-primary" },
-  { icon: Database, label: "ERP", description: "Καταχώρηση", color: "text-success" },
+  { icon: Mail, label: "Email", color: "text-info" },
+  { icon: ScanText, label: "OCR", color: "text-accent" },
+  { icon: FileText, label: "Draft", color: "text-primary" },
+  { icon: CheckCircle2, label: "Έγκριση", color: "text-success" },
+  { icon: Database, label: "ERP", color: "text-success" },
+  { icon: UserCheck, label: "Λογιστής", color: "text-warning" },
 ];
 
 const statusConfig: Record<string, { label: string; className: string; icon: typeof CheckCircle2; barColor: string }> = {
@@ -25,6 +26,8 @@ const statusConfig: Record<string, { label: string; className: string; icon: typ
   review: { label: "Αναμονή Ελέγχου", className: "bg-warning/10 text-warning", icon: AlertCircle, barColor: "hsl(38 92% 50%)" },
   approved: { label: "Εγκρίθηκε", className: "bg-success/10 text-success", icon: CheckCircle2, barColor: "hsl(152 60% 42%)" },
   submitted: { label: "Υποβλήθηκε στο ERP", className: "bg-success/10 text-success", icon: CheckCircle2, barColor: "hsl(152 60% 42%)" },
+  accountant_pending: { label: "Αναμονή Λογιστή", className: "bg-warning/10 text-warning", icon: AlertCircle, barColor: "hsl(38 92% 50%)" },
+  accountant_approved: { label: "Εγκρίθηκε (Λογιστής)", className: "bg-success/10 text-success", icon: CheckCircle2, barColor: "hsl(152 60% 60%)" },
   error: { label: "Σφάλμα", className: "bg-destructive/10 text-destructive", icon: AlertCircle, barColor: "hsl(0 72% 51%)" },
 };
 

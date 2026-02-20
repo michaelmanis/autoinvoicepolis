@@ -3,6 +3,8 @@ import polisLogo from "@/assets/polis-logo.png";
 import AppSidebar from "@/components/AppSidebar";
 import PipelineView from "@/components/PipelineView";
 import InvoicesPage from "@/pages/InvoicesPage";
+import ProjectsPage from "@/pages/ProjectsPage";
+import AccountantPage from "@/pages/AccountantPage";
 
 const Index = () => {
   const [activeView, setActiveView] = useState("dashboard");
@@ -14,7 +16,6 @@ const Index = () => {
         <header className="flex items-center justify-between border-b border-border bg-card px-8 py-4">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Invoice Automation</h1>
-            
           </div>
           <img src={polisLogo} alt="Polis Analytica" className="h-16 object-contain" />
         </header>
@@ -22,10 +23,12 @@ const Index = () => {
         <div className="animate-slide-in p-8">
           {activeView === "dashboard" && <PipelineView />}
           {activeView === "invoices" && <InvoicesPage />}
+          {activeView === "projects" && <ProjectsPage />}
+          {activeView === "accountant" && <AccountantPage />}
         </div>
       </main>
-    </div>);
-
+    </div>
+  );
 };
 
 export default Index;
