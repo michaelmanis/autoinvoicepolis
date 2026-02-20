@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, FileText, Clock, Eye } from "lucide-react";
+import { CheckCircle2, XCircle, FileText, Clock, Eye, FolderCheck } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
 
 type Invoice = {
@@ -45,18 +45,40 @@ export default function AccountantPage() {
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, approved }: { id: string; approved: boolean }) => {
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status: approved ? "accountant_approved" : "draft" })
-        .eq("id", id);
-      if (error) throw error;
+      if (approved) {
+        // Call archive-invoice edge function — it approves AND moves to monthly folder
+        const { data: { session } } = await supabase.auth.getSession();
+        const resp = await supabase.functions.invoke("archive-invoice", {
+          body: { invoice_id: id },
+          headers: session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : undefined,
+        });
+        if (resp.error) throw resp.error;
+        return { approved, monthFolder: resp.data?.month_folder };
+      } else {
+        // Reject: return to draft
+        const { error } = await supabase
+          .from("invoices")
+          .update({ status: "draft" })
+          .eq("id", id);
+        if (error) throw error;
+        return { approved };
+      }
     },
-    onSuccess: (_, { approved }) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["accountant-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      toast({
-        title: approved ? "✅ Εγκρίθηκε από λογιστή!" : "↩️ Επιστράφηκε σε Draft",
-      });
+      if (result.approved) {
+        toast({
+          title: "✅ Εγκρίθηκε & αρχειοθετήθηκε!",
+          description: result.monthFolder
+            ? `Αρχειοθετήθηκε στον φάκελο: ${result.monthFolder}`
+            : "Το τιμολόγιο εγκρίθηκε από λογιστή.",
+        });
+      } else {
+        toast({ title: "↩️ Επιστράφηκε σε Draft" });
+      }
     },
     onError: (err: any) => {
       toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
