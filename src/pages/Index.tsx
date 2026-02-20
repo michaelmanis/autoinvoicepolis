@@ -5,6 +5,7 @@ import PipelineView from "@/components/PipelineView";
 import InvoicesPage from "@/pages/InvoicesPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import AccountantPage from "@/pages/AccountantPage";
+import AccountantFolderPage from "@/pages/AccountantFolderPage";
 
 const Index = () => {
   const [activeView, setActiveView] = useState("dashboard");
@@ -25,6 +26,7 @@ const Index = () => {
           {activeView === "invoices" && <InvoicesPage />}
           {activeView === "projects" && <ProjectsPage />}
           {activeView === "accountant" && <AccountantPage />}
+          {activeView === "accountant-folder" && <AccountantFolderPage />}
         </div>
       </main>
     </div>

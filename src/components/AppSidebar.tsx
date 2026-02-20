@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, LogOut, FolderOpen, UserCheck } from "lucide-react";
+import { LayoutDashboard, FileText, LogOut, FolderOpen, UserCheck, FolderCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -7,6 +7,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
   { icon: FileText, label: "Τιμολόγια", id: "invoices" },
   { icon: FolderOpen, label: "Projects", id: "projects" },
+  { icon: FolderCheck, label: "Φάκελος Λογιστή", id: "accountant-folder" },
 ];
 
 const accountantNavItems = [
