@@ -25,6 +25,7 @@ import {
   ChevronRight,
   UserCheck,
   FolderOpen,
+  FolderCheck,
 } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -128,10 +129,30 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
     }
   };
 
+  const [archiving, setArchiving] = useState(false);
+
   const handleAccountantApprove = async () => {
-    const updated = { ...form, status: "accountant_approved" };
-    setForm(updated);
-    updateMutation.mutate(updated);
+    setArchiving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await supabase.functions.invoke("archive-invoice", {
+        body: { invoice_id: invoice.id },
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
+      });
+      if (resp.error) throw resp.error;
+      setForm((prev) => ({ ...prev, status: "accountant_approved" }));
+      const monthFolder = resp.data?.month_folder;
+      toast({
+        title: "✅ Εγκρίθηκε & αρχειοθετήθηκε!",
+        description: monthFolder ? `Αρχειοθετήθηκε στον φάκελο: ${monthFolder}` : "Το τιμολόγιο εγκρίθηκε.",
+      });
+    } catch (err: any) {
+      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
+    } finally {
+      setArchiving(false);
+    }
   };
 
   const fileUrl = invoice.file_url;
@@ -184,11 +205,15 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
           {form.status === "accountant_pending" && (
             <Button
               onClick={handleAccountantApprove}
-              disabled={updateMutation.isPending}
+              disabled={archiving}
               className="bg-success hover:bg-success/90 text-success-foreground"
             >
-              <UserCheck className="mr-2 h-4 w-4" />
-              Έγκριση Λογιστή
+              {archiving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FolderCheck className="mr-2 h-4 w-4" />
+              )}
+              Έγκριση & Αρχειοθέτηση
             </Button>
           )}
           {form.status === "accountant_approved" && (
