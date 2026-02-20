@@ -111,6 +111,24 @@ export default function InvoicesPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files);
+    const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+    const valid = files.filter((f) => allowedTypes.includes(f.type) && f.size <= 20 * 1024 * 1024);
+    const invalid = files.length - valid.length;
+    if (invalid > 0) {
+      toast({
+        title: `${invalid} αρχεία απορρίφθηκαν`,
+        description: "Μόνο PDF, PNG, JPG, WebP έως 20MB",
+        variant: "destructive",
+      });
+    }
+    if (valid.length) {
+      setUploadQueue((prev) => [...prev, ...valid.map((f) => ({ file: f, status: "pending" as const }))]);
+    }
+  };
+
   const runBulkUpload = async () => {
     const pending = uploadQueue.filter((q) => q.status === "pending");
     if (!pending.length) return;
@@ -212,17 +230,22 @@ export default function InvoicesPage() {
             </p>
 
             {/* Drop area */}
-            {!uploadQueue.length && (
-              <button
-                type="button"
-                className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed border-border py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="h-10 w-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">Κάντε κλικ για επιλογή αρχείων</p>
-                <p className="text-xs text-muted-foreground/70">PDF, PNG, JPG, WebP — έως 20MB το αρχείο</p>
-              </button>
-            )}
+            <div
+              className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed border-border py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+            >
+              <Upload className="h-10 w-10 text-muted-foreground/50" />
+              {uploadQueue.length === 0 ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Σύρτε αρχεία εδώ ή κάντε κλικ για επιλογή</p>
+                  <p className="text-xs text-muted-foreground/70">PDF, PNG, JPG, WebP — έως 20MB το αρχείο</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">+ Προσθήκη περισσότερων αρχείων</p>
+              )}
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -259,25 +282,17 @@ export default function InvoicesPage() {
               </div>
             )}
 
-            <div className="flex gap-2">
-              {!isUploading && (
-                <Button variant="outline" className="flex-1" onClick={() => fileInputRef.current?.click()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Προσθήκη
-                </Button>
+            <Button
+              className="w-full"
+              onClick={runBulkUpload}
+              disabled={!uploadQueue.some(q => q.status === 'pending') || isUploading}
+            >
+              {isUploading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία...</>
+              ) : (
+                <><Upload className="mr-2 h-4 w-4" />Ανέβασμα {uploadQueue.filter(q => q.status === 'pending').length > 0 ? `(${uploadQueue.filter(q => q.status === 'pending').length} αρχεία)` : ""}</>
               )}
-              <Button
-                className="flex-1"
-                onClick={runBulkUpload}
-                disabled={!uploadQueue.some(q => q.status === 'pending') || isUploading}
-              >
-                {isUploading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία...</>
-                ) : (
-                  <><Upload className="mr-2 h-4 w-4" />Ανέβασμα ({uploadQueue.filter(q => q.status === 'pending').length})</>
-                )}
-              </Button>
-            </div>
+            </Button>
           </DialogContent>
         </Dialog>
       </div>
