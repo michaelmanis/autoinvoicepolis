@@ -40,7 +40,7 @@ serve(async (req) => {
       });
     }
 
-    const { file_path, file_name } = await req.json();
+    const { file_path, file_name, project_id } = await req.json();
     if (!file_path) {
       return new Response(JSON.stringify({ error: "file_path is required" }), {
         status: 400,
@@ -242,6 +242,7 @@ Dates should be in YYYY-MM-DD format. Amounts should be numbers without currency
         status: "draft",
         file_url: signedUrlData?.signedUrl || null,
         file_name: file_name || null,
+        project_id: project_id || null,
       })
       .select()
       .single();

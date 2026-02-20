@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -20,9 +19,9 @@ import {
   AlertCircle,
   Loader2,
   Eye,
-  Pencil,
   Trash2,
   Plus,
+  X,
 } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
 
@@ -44,6 +43,12 @@ type Invoice = {
   updated_at: string;
 };
 
+type UploadItem = {
+  file: File;
+  status: "pending" | "uploading" | "done" | "error";
+  error?: string;
+};
+
 const statusConfig: Record<string, { label: string; className: string; icon: any }> = {
   draft: { label: "Draft", className: "bg-info/10 text-info", icon: Clock },
   review: { label: "Αναμονή", className: "bg-warning/10 text-warning", icon: AlertCircle },
@@ -56,8 +61,10 @@ const statusConfig: Record<string, { label: string; className: string; icon: any
 
 export default function InvoicesPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -84,54 +91,87 @@ export default function InvoicesPage() {
     },
   });
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
 
     const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      toast({ title: "Μη αποδεκτός τύπος αρχείου", description: "PDF, PNG, JPG ή WebP", variant: "destructive" });
-      return;
-    }
-    if (file.size > 20 * 1024 * 1024) {
-      toast({ title: "Πολύ μεγάλο αρχείο", description: "Μέγιστο 20MB", variant: "destructive" });
-      return;
-    }
+    const valid = files.filter((f) => allowedTypes.includes(f.type) && f.size <= 20 * 1024 * 1024);
+    const invalid = files.length - valid.length;
 
-    setUploading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const safeFileName = file.name
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // strip diacritics
-        .replace(/[^\x00-\x7F]/g, "_")   // replace non-ASCII (e.g. Greek) with _
-        .replace(/\s+/g, "_")            // replace spaces with _
-        .replace(/_+/g, "_");            // collapse multiple underscores
-      const filePath = `${user.id}/${Date.now()}_${safeFileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("invoices")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Call OCR edge function
-      const { data, error } = await supabase.functions.invoke("extract-invoice", {
-        body: { file_path: filePath, file_name: file.name },
+    if (invalid > 0) {
+      toast({
+        title: `${invalid} αρχεία απορρίφθηκαν`,
+        description: "Μόνο PDF, PNG, JPG, WebP έως 20MB",
+        variant: "destructive",
       });
-
-      if (error) throw error;
-
-      toast({ title: "Τιμολόγιο αναγνωρίστηκε!", description: `Προμηθευτής: ${data.extracted?.supplier || "—"}` });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      setUploadOpen(false);
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
     }
+
+    setUploadQueue((prev) => [...prev, ...valid.map((f) => ({ file: f, status: "pending" as const }))]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const runBulkUpload = async () => {
+    const pending = uploadQueue.filter((q) => q.status === "pending");
+    if (!pending.length) return;
+    setIsUploading(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: "Μη εξουσιοδοτημένος", variant: "destructive" });
+      setIsUploading(false);
+      return;
+    }
+
+    for (let i = 0; i < uploadQueue.length; i++) {
+      if (uploadQueue[i].status !== "pending") continue;
+
+      setUploadQueue((prev) =>
+        prev.map((x, idx) => (idx === i ? { ...x, status: "uploading" } : x))
+      );
+
+      try {
+        const item = uploadQueue[i];
+        const safeFileName = item.file.name
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^\x00-\x7F]/g, "_")
+          .replace(/\s+/g, "_")
+          .replace(/_+/g, "_");
+        const filePath = `${user.id}/${Date.now()}_${safeFileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("invoices")
+          .upload(filePath, item.file);
+        if (uploadError) throw uploadError;
+
+        const { error: fnError } = await supabase.functions.invoke("extract-invoice", {
+          body: { file_path: filePath, file_name: item.file.name },
+        });
+        if (fnError) throw fnError;
+
+        setUploadQueue((prev) =>
+          prev.map((x, idx) => (idx === i ? { ...x, status: "done" } : x))
+        );
+      } catch (err: any) {
+        setUploadQueue((prev) =>
+          prev.map((x, idx) =>
+            idx === i ? { ...x, status: "error", error: err.message } : x
+          )
+        );
+      }
+    }
+
+    setIsUploading(false);
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+
+    const doneCount = uploadQueue.filter((_, i) => uploadQueue[i]?.status !== "error").length;
+    toast({ title: `Ολοκληρώθηκε! ${doneCount} τιμολόγια ανέβηκαν` });
+
+    setTimeout(() => {
+      setUploadOpen(false);
+      setUploadQueue([]);
+    }, 1500);
   };
 
   if (selectedInvoice) {
@@ -153,37 +193,90 @@ export default function InvoicesPage() {
           <h2 className="text-lg font-semibold text-foreground">Τιμολόγια</h2>
           <p className="text-sm text-muted-foreground">Ανεβάστε και διαχειριστείτε τα τιμολόγιά σας</p>
         </div>
-        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <Dialog
+          open={uploadOpen}
+          onOpenChange={(v) => { if (!isUploading) { setUploadOpen(v); if (!v) setUploadQueue([]); } }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               Νέο Τιμολόγιο
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Ανέβασμα Τιμολογίου</DialogTitle>
+              <DialogTitle>Ανέβασμα Τιμολογίων</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <p className="text-sm text-muted-foreground">
-                Ανεβάστε PDF ή εικόνα τιμολογίου. Το AI θα αναγνωρίσει αυτόματα τα δεδομένα.
-              </p>
-              <div className="space-y-2">
-                <Label htmlFor="invoice-file">Αρχείο (PDF, PNG, JPG)</Label>
-                <Input
-                  id="invoice-file"
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg,.webp"
-                  onChange={handleUpload}
-                  disabled={uploading}
-                />
+            <p className="text-sm text-muted-foreground">
+              Επιλέξτε ένα ή πολλά αρχεία. Το AI θα αναγνωρίσει αυτόματα τα δεδομένα κάθε τιμολογίου.
+            </p>
+
+            {/* Drop area */}
+            {!uploadQueue.length && (
+              <button
+                type="button"
+                className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed border-border py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-10 w-10 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">Κάντε κλικ για επιλογή αρχείων</p>
+                <p className="text-xs text-muted-foreground/70">PDF, PNG, JPG, WebP — έως 20MB το αρχείο</p>
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.png,.jpg,.jpeg,.webp"
+              className="hidden"
+              onChange={handleFilesSelected}
+              disabled={isUploading}
+            />
+
+            {/* Queue */}
+            {uploadQueue.length > 0 && (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {uploadQueue.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 px-3 py-2"
+                  >
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 text-sm truncate">{item.file.name}</span>
+                    {item.status === "pending" && <span className="text-xs text-muted-foreground">Αναμονή</span>}
+                    {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                    {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-success" />}
+                    {item.status === "error" && (
+                      <span className="text-xs text-destructive" title={item.error}>Σφάλμα</span>
+                    )}
+                    {!isUploading && item.status === "pending" && (
+                      <button onClick={() => setUploadQueue((prev) => prev.filter((_, i) => i !== idx))}>
+                        <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-              {uploading && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>AI αναγνώριση σε εξέλιξη...</span>
-                </div>
+            )}
+
+            <div className="flex gap-2">
+              {!isUploading && (
+                <Button variant="outline" className="flex-1" onClick={() => fileInputRef.current?.click()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Προσθήκη
+                </Button>
               )}
+              <Button
+                className="flex-1"
+                onClick={runBulkUpload}
+                disabled={!uploadQueue.some(q => q.status === 'pending') || isUploading}
+              >
+                {isUploading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία...</>
+                ) : (
+                  <><Upload className="mr-2 h-4 w-4" />Ανέβασμα ({uploadQueue.filter(q => q.status === 'pending').length})</>
+                )}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
