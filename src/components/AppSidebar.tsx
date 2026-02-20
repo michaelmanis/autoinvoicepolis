@@ -125,7 +125,7 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
       {/* Header */}
       {collapsed ? (
         <div className="flex flex-col items-center border-b border-sidebar-border py-3 gap-2">
-          <img src={consultingIcon} alt="Polis Analytica" className="h-12 w-12 object-contain" />
+          <img src={consultingIcon} alt="Polis Analytica" className="h-10 w-10 object-contain" />
           <button
             onClick={() => setCollapsed(false)}
             className="flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
