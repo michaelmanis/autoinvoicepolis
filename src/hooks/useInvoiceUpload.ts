@@ -55,8 +55,11 @@ export function useInvoiceUpload() {
   };
 
   const runUpload = async () => {
-    const hasPending = queue.some((q) => q.status === "pending");
-    if (!hasPending) return;
+    const pendingIndices = queue
+      .map((q, i) => (q.status === "pending" ? i : -1))
+      .filter((i) => i !== -1);
+
+    if (pendingIndices.length === 0) return;
 
     setIsUploading(true);
 
@@ -67,16 +70,16 @@ export function useInvoiceUpload() {
       return;
     }
 
-    let totalExtracted = 0;
+    // Mark all pending as uploading at once
+    setQueue((prev) =>
+      prev.map((x, idx) =>
+        pendingIndices.includes(idx) ? { ...x, status: "uploading" } : x
+      )
+    );
 
-    for (let i = 0; i < queue.length; i++) {
-      if (queue[i].status !== "pending") continue;
-
-      setQueue((prev) =>
-        prev.map((x, idx) => (idx === i ? { ...x, status: "uploading" } : x))
-      );
-
-      try {
+    // Process all files in parallel
+    const results = await Promise.allSettled(
+      pendingIndices.map(async (i) => {
         const item = queue[i];
         const safeName = sanitizeFileName(item.file.name);
         const filePath = `${user.id}/${Date.now()}_${safeName}`;
@@ -93,19 +96,27 @@ export function useInvoiceUpload() {
         if (fnError) throw fnError;
 
         const count = (fnData as any)?.count ?? 1;
-        totalExtracted += count;
+        return { index: i, count };
+      })
+    );
 
-        setQueue((prev) =>
-          prev.map((x, idx) => (idx === i ? { ...x, status: "done", count } : x))
-        );
-      } catch (err: any) {
-        setQueue((prev) =>
-          prev.map((x, idx) =>
-            idx === i ? { ...x, status: "error", error: err.message } : x
-          )
-        );
-      }
-    }
+    // Update queue statuses from results
+    setQueue((prev) => {
+      const next = [...prev];
+      results.forEach((result, ri) => {
+        const i = pendingIndices[ri];
+        if (result.status === "fulfilled") {
+          next[i] = { ...next[i], status: "done", count: result.value.count };
+        } else {
+          next[i] = { ...next[i], status: "error", error: (result.reason as Error)?.message ?? "Σφάλμα" };
+        }
+      });
+      return next;
+    });
+
+    const totalExtracted = results.reduce((sum, r) =>
+      r.status === "fulfilled" ? sum + r.value.count : sum, 0
+    );
 
     setIsUploading(false);
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
