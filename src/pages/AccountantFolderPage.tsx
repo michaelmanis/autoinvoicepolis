@@ -149,7 +149,7 @@ export default function AccountantFolderPage() {
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
           <CheckCircle2 className="h-3 w-3" />
-          Εγκρίθηκε
+          Διασταυρώθηκε
         </span>
       );
     }
