@@ -37,13 +37,16 @@ serve(async (req) => {
       });
     }
 
-    const { invoice_id } = await req.json();
+    const { invoice_id, target_status } = await req.json();
     if (!invoice_id) {
       return new Response(JSON.stringify({ error: "invoice_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // target_status: "accountant_pending" (ERP send) or "accountant_approved" (accountant approval)
+    const finalStatus = target_status || "accountant_approved";
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
@@ -120,8 +123,8 @@ serve(async (req) => {
       }
     }
 
-    // Update invoice: status -> accountant_approved, update file_url if archived
-    const updatePayload: Record<string, unknown> = { status: "accountant_approved" };
+    // Update invoice status and file_url if archived
+    const updatePayload: Record<string, unknown> = { status: finalStatus };
     if (newSignedUrl) updatePayload.file_url = newSignedUrl;
 
     const { error: updateError } = await supabaseAdmin

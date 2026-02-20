@@ -112,15 +112,23 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
     setErpSending(true);
     try {
       await new Promise((r) => setTimeout(r, 1500));
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status: "accountant_pending" })
-        .eq("id", invoice.id);
-      if (error) throw error;
+      // Archive file to monthly folder in storage
+      const { data: { session } } = await supabase.auth.getSession();
+      const archiveResp = await supabase.functions.invoke("archive-invoice", {
+        body: { invoice_id: invoice.id, target_status: "accountant_pending" },
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined,
+      });
+      if (archiveResp.error) throw archiveResp.error;
+
       setForm((prev) => ({ ...prev, status: "accountant_pending" }));
+      const monthFolder = archiveResp.data?.month_folder;
       toast({
         title: "Στάλθηκε στο ERP!",
-        description: `Αναμένει επιβεβαίωση λογιστή.`,
+        description: monthFolder
+          ? `Αρχειοθετήθηκε στον φάκελο: ${monthFolder}`
+          : "Αναμένει επιβεβαίωση λογιστή.",
       });
     } catch (err: any) {
       toast({ title: "Σφάλμα ERP", description: err.message, variant: "destructive" });
