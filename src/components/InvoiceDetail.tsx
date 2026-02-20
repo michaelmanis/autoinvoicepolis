@@ -181,7 +181,7 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
               Αποστολή σε ERP
             </Button>
           )}
-          {(form.status === "accountant_pending" || isAccountant) && form.status === "accountant_pending" && (
+          {form.status === "accountant_pending" && (
             <Button
               onClick={handleAccountantApprove}
               disabled={updateMutation.isPending}
