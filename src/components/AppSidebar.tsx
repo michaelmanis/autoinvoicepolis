@@ -127,12 +127,7 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
         collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3",
       )}>
         {!collapsed && (
-          <div className="flex items-center gap-2 min-w-0">
-            <img src={polisLogo} alt="Polis Analytica" className="h-10 w-auto object-contain shrink-0" />
-            <span className="text-sm font-semibold tracking-wide text-sidebar-foreground truncate">
-              DocuHandler
-            </span>
-          </div>
+          <img src={polisLogo} alt="Polis Analytica" className="h-10 w-auto object-contain" />
         )}
         {collapsed && (
           <img src={polisLogo} alt="Polis Analytica" className="h-8 w-auto object-contain" />
