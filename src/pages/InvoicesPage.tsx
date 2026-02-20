@@ -5,7 +5,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Upload, FileText, CheckCircle2, Loader2, Eye, Trash2, Plus, X,
+  Upload, FileText, CheckCircle2, Loader2, Eye, Trash2, Plus, X, Copy,
 } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
 import { useInvoices, useDeleteInvoice } from "@/hooks/useInvoices";
@@ -126,25 +126,39 @@ function InvoiceRow({
   inv,
   onView,
   onDelete,
+  isDuplicate,
 }: {
   inv: Invoice;
   onView: (inv: Invoice) => void;
   onDelete: (id: string) => void;
+  isDuplicate?: boolean;
 }) {
   const status = STATUS_CONFIG[inv.status] ?? STATUS_CONFIG.draft;
   const StatusIcon = status.icon;
   const isLocked = LOCKED_STATUSES.has(inv.status);
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-secondary/50">
+    <div className={`flex items-center justify-between px-6 py-4 transition-colors hover:bg-secondary/50 ${isDuplicate ? "bg-destructive/5" : ""}`}>
       <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-          <FileText className="h-5 w-5 text-primary" />
+        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${isDuplicate ? "bg-destructive/10" : "bg-secondary"}`}>
+          {isDuplicate ? (
+            <Copy className="h-5 w-5 text-destructive" />
+          ) : (
+            <FileText className="h-5 w-5 text-primary" />
+          )}
         </div>
         <div>
-          <p className="font-medium text-card-foreground">
-            {inv.invoice_number || inv.file_name || "Χωρίς αριθμό"}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-card-foreground">
+              {inv.invoice_number || inv.file_name || "Χωρίς αριθμό"}
+            </p>
+            {isDuplicate && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive uppercase tracking-wide">
+                <Copy className="h-3 w-3" />
+                Διπλότυπο
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">{inv.supplier || "Άγνωστος προμηθευτής"}</p>
         </div>
       </div>
@@ -194,6 +208,23 @@ export default function InvoicesPage() {
     );
   }
 
+  // Compute duplicate IDs: invoices sharing same supplier_vat + invoice_number
+  const duplicateIds = new Set<string>();
+  if (invoices) {
+    const seen = new Map<string, string>(); // key -> first invoice id
+    for (const inv of invoices) {
+      if (inv.supplier_vat && inv.invoice_number) {
+        const key = `${inv.supplier_vat}__${inv.invoice_number}`;
+        if (seen.has(key)) {
+          duplicateIds.add(inv.id);
+          duplicateIds.add(seen.get(key)!);
+        } else {
+          seen.set(key, inv.id);
+        }
+      }
+    }
+  }
+
   // Group by upload date
   const groups = (invoices ?? []).reduce<Record<string, Invoice[]>>((acc, inv) => {
     const key = new Date(inv.created_at).toLocaleDateString("el-GR", {
@@ -212,6 +243,15 @@ export default function InvoicesPage() {
         </div>
         <UploadDialog />
       </div>
+
+      {duplicateIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <Copy className="h-4 w-4 shrink-0" />
+          <span>
+            Εντοπίστηκαν <strong>{duplicateIds.size}</strong> πιθανά διπλότυπα τιμολόγια (ίδιο ΑΦΜ + αριθμός τιμολογίου).
+          </span>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -244,6 +284,7 @@ export default function InvoicesPage() {
                       inv={inv}
                       onView={setSelectedInvoice}
                       onDelete={(id) => deleteMutation.mutate(id)}
+                      isDuplicate={duplicateIds.has(inv.id)}
                     />
                   ))}
                 </div>
