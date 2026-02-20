@@ -87,6 +87,17 @@ export function useAccountantMutation(
           .update({ status: "draft" })
           .eq("id", id);
         if (error) throw error;
+        // Log rejection
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("invoice_actions").insert({
+            invoice_id: id,
+            user_id: user.id,
+            user_email: user.email,
+            action: "accountant_rejected",
+            metadata: {},
+          });
+        }
         return { approved, monthFolder: undefined };
       }
     },

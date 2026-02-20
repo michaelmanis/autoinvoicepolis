@@ -5,6 +5,7 @@ import InvoicesPage from "@/pages/InvoicesPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 import AccountantPage from "@/pages/AccountantPage";
 import AccountantFolderPage from "@/pages/AccountantFolderPage";
+import SettingsPage from "@/pages/SettingsPage";
 
 const Index = () => {
   const [activeView, setActiveView] = useState("dashboard");
@@ -18,11 +19,12 @@ const Index = () => {
         </header>
 
         <div className="animate-slide-in p-8">
-          {activeView === "dashboard" && <PipelineView />}
-          {activeView === "invoices" && <InvoicesPage />}
-          {activeView === "projects" && <ProjectsPage />}
-          {activeView === "accountant" && <AccountantPage />}
+          {activeView === "dashboard"         && <PipelineView />}
+          {activeView === "invoices"          && <InvoicesPage />}
+          {activeView === "projects"          && <ProjectsPage />}
+          {activeView === "accountant"        && <AccountantPage />}
           {activeView === "accountant-folder" && <AccountantFolderPage />}
+          {activeView === "settings"          && <SettingsPage />}
         </div>
       </main>
     </div>
@@ -30,3 +32,4 @@ const Index = () => {
 };
 
 export default Index;
+
