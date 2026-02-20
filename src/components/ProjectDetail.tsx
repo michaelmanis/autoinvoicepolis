@@ -58,6 +58,7 @@ type UploadItem = {
   file: File;
   status: "pending" | "uploading" | "done" | "error";
   error?: string;
+  count?: number; // number of invoices extracted from this file
 };
 
 const statusConfig: Record<string, { label: string; className: string; icon: any }> = {
@@ -201,13 +202,14 @@ export default function ProjectDetail({ project, onBack }: Props) {
           .upload(filePath, item.file);
         if (uploadError) throw uploadError;
 
-        const { error: fnError } = await supabase.functions.invoke("extract-invoice", {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("extract-invoice", {
           body: { file_path: filePath, file_name: item.file.name, project_id: project.id },
         });
         if (fnError) throw fnError;
 
+        const count = (fnData as any)?.count ?? 1;
         setUploadQueue((prev) =>
-          prev.map((x, idx) => (idx === i ? { ...x, status: "done" } : x))
+          prev.map((x, idx) => (idx === i ? { ...x, status: "done", count } : x))
         );
       } catch (err: any) {
         setUploadQueue((prev) =>
@@ -221,10 +223,9 @@ export default function ProjectDetail({ project, onBack }: Props) {
     setIsUploading(false);
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
 
-    const done = uploadQueue.filter((_, i) => uploadQueue[i]?.status !== "error").length;
-    toast({ title: `Ολοκληρώθηκε! ${uploadQueue.filter(q => q.status !== 'error').length} τιμολόγια ανέβηκαν` });
+    const totalInvoices = uploadQueue.reduce((sum, q) => sum + (q.count ?? (q.status === "done" ? 1 : 0)), 0);
+    toast({ title: `Ολοκληρώθηκε! ${totalInvoices} τιμολόγιο/α εξήχθησαν` });
 
-    // Close after short delay
     setTimeout(() => {
       setUploadOpen(false);
       setUploadQueue([]);

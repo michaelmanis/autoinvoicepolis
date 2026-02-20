@@ -47,6 +47,7 @@ type UploadItem = {
   file: File;
   status: "pending" | "uploading" | "done" | "error";
   error?: string;
+  count?: number; // number of invoices extracted from this file
 };
 
 const statusConfig: Record<string, { label: string; className: string; icon: any }> = {
@@ -163,13 +164,14 @@ export default function InvoicesPage() {
           .upload(filePath, item.file);
         if (uploadError) throw uploadError;
 
-        const { error: fnError } = await supabase.functions.invoke("extract-invoice", {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("extract-invoice", {
           body: { file_path: filePath, file_name: item.file.name },
         });
         if (fnError) throw fnError;
 
+        const count = (fnData as any)?.count ?? 1;
         setUploadQueue((prev) =>
-          prev.map((x, idx) => (idx === i ? { ...x, status: "done" } : x))
+          prev.map((x, idx) => (idx === i ? { ...x, status: "done", count } : x))
         );
       } catch (err: any) {
         setUploadQueue((prev) =>
@@ -183,8 +185,9 @@ export default function InvoicesPage() {
     setIsUploading(false);
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
 
-    const doneCount = uploadQueue.filter((_, i) => uploadQueue[i]?.status !== "error").length;
-    toast({ title: `Ολοκληρώθηκε! ${doneCount} τιμολόγια ανέβηκαν` });
+    // Sum all extracted invoice records across files
+    const totalInvoices = uploadQueue.reduce((sum, q) => sum + (q.count ?? (q.status === "done" ? 1 : 0)), 0);
+    toast({ title: `Ολοκληρώθηκε! ${totalInvoices} τιμολόγιο/α εξήχθησαν` });
 
     setTimeout(() => {
       setUploadOpen(false);
@@ -268,7 +271,12 @@ export default function InvoicesPage() {
                     <span className="flex-1 text-sm truncate">{item.file.name}</span>
                     {item.status === "pending" && <span className="text-xs text-muted-foreground">Αναμονή</span>}
                     {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
-                    {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-success" />}
+                    {item.status === "done" && (
+                      <span className="flex items-center gap-1 text-xs text-success font-medium">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {item.count && item.count > 1 ? `${item.count} τιμολόγια` : "✓"}
+                      </span>
+                    )}
                     {item.status === "error" && (
                       <span className="text-xs text-destructive" title={item.error}>Σφάλμα</span>
                     )}
