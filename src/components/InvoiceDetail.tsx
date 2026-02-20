@@ -315,7 +315,29 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
     onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
   });
 
-  const handleSave = () => updateMutation.mutate(form);
+  const checkDuplicate = async (): Promise<boolean> => {
+    if (!form.supplier_vat || !form.invoice_number) return false;
+    const { data } = await supabase
+      .from("invoices")
+      .select("id, supplier, invoice_number")
+      .eq("supplier_vat", form.supplier_vat)
+      .eq("invoice_number", form.invoice_number)
+      .neq("id", invoice.id)
+      .limit(1);
+    return (data?.length ?? 0) > 0;
+  };
+
+  const handleSave = async () => {
+    const isDuplicate = await checkDuplicate();
+    if (isDuplicate) {
+      toast({
+        title: "⚠️ Πιθανό Διπλότυπο",
+        description: `Υπάρχει ήδη τιμολόγιο με ΑΦΜ "${form.supplier_vat}" και αριθμό "${form.invoice_number}". Αποθηκεύτηκε κανονικά αλλά ελέγξτε αν είναι διπλότυπο.`,
+        variant: "destructive",
+      });
+    }
+    updateMutation.mutate(form);
+  };
 
   const handleApprove = async () => {
     const updated = { ...form, status: "approved" };
