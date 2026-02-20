@@ -61,9 +61,15 @@ serve(async (req) => {
       });
     }
 
-    // Convert file to base64 using native Uint8Array + btoa
+    // Convert file to base64 using chunked approach to avoid stack overflow on large files
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
 
     const ext = file_path.split(".").pop()?.toLowerCase() || "";
     const mimeMap: Record<string, string> = {
