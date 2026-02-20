@@ -28,19 +28,19 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
         toast({
           title: "Εγγραφή επιτυχής",
-          description: "Ελέγξτε το email σας για επιβεβαίωση.",
+          description: "Ελέγξτε το email σας για επιβεβαίωση."
         });
       }
     } catch (error: any) {
       toast({
         title: "Σφάλμα",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -52,7 +52,7 @@ export default function Auth() {
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center gap-4">
           <img src={polisLogo} alt="Polis Analytica" className="h-16 object-contain" />
-          <h1 className="text-2xl font-semibold text-foreground">Invoice Automation</h1>
+          <h1 className="text-2xl font-semibold text-foreground">​DocuHandler</h1>
           <p className="text-sm text-muted-foreground">
             {isLogin ? "Συνδεθείτε στο λογαριασμό σας" : "Δημιουργήστε νέο λογαριασμό"}
           </p>
@@ -67,8 +67,8 @@ export default function Auth() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              required
-            />
+              required />
+
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Κωδικός</Label>
@@ -79,8 +79,8 @@ export default function Auth() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              minLength={6}
-            />
+              minLength={6} />
+
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
@@ -117,8 +117,8 @@ export default function Auth() {
             } finally {
               setLoading(false);
             }
-          }}
-        >
+          }}>
+
           🚀 Είσοδος ως Demo
         </Button>
 
@@ -126,12 +126,12 @@ export default function Auth() {
           {isLogin ? "Δεν έχετε λογαριασμό;" : "Έχετε ήδη λογαριασμό;"}{" "}
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="font-medium text-primary underline-offset-4 hover:underline"
-          >
+            className="font-medium text-primary underline-offset-4 hover:underline">
+
             {isLogin ? "Εγγραφή" : "Σύνδεση"}
           </button>
         </p>
       </div>
-    </div>
-  );
+    </div>);
+
 }
