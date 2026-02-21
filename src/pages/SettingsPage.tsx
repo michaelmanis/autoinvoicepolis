@@ -14,7 +14,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
   Save, Loader2, CheckCircle2, Plug, User, Shield, Palette, Trash2, Plus,
+  Building2, UserPlus, X,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -485,6 +487,319 @@ function ThemeTab() {
   );
 }
 
+// ─── Clients Tab (admin only) ─────────────────────────────────────────────────
+
+const PERMISSION_OPTIONS = [
+  { value: "view_invoices", label: "Προβολή τιμολογίων" },
+  { value: "upload_edit", label: "Ανέβασμα & επεξεργασία" },
+  { value: "approve_erp", label: "Έγκριση & αποστολή ERP" },
+  { value: "manage_projects", label: "Διαχείριση Projects" },
+] as const;
+
+type Company = {
+  id: string;
+  name: string;
+  vat_number: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+};
+
+type CompanyMember = {
+  id: string;
+  company_id: string;
+  user_id: string;
+  permissions: string[];
+  created_at: string;
+};
+
+function ClientsTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [showAddCompany, setShowAddCompany] = useState(false);
+  const [newCompany, setNewCompany] = useState({ name: "", vat_number: "", address: "", phone: "", email: "" });
+  const [newMemberUserId, setNewMemberUserId] = useState("");
+  const [newMemberPerms, setNewMemberPerms] = useState<string[]>(["view_invoices"]);
+
+  // Fetch companies
+  const { data: companies = [], isLoading: loadingCompanies } = useQuery({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("companies").select("*").order("name");
+      if (error) throw error;
+      return data as Company[];
+    },
+  });
+
+  // Fetch members for selected company
+  const { data: members = [], isLoading: loadingMembers } = useQuery({
+    queryKey: ["company-members", selectedCompany],
+    queryFn: async () => {
+      if (!selectedCompany) return [];
+      const { data, error } = await supabase
+        .from("company_members")
+        .select("*")
+        .eq("company_id", selectedCompany)
+        .order("created_at");
+      if (error) throw error;
+      return data as CompanyMember[];
+    },
+    enabled: !!selectedCompany,
+  });
+
+  // Create company
+  const createCompany = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("companies").insert(newCompany as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      toast({ title: "✅ Εταιρεία δημιουργήθηκε!" });
+      setNewCompany({ name: "", vat_number: "", address: "", phone: "", email: "" });
+      setShowAddCompany(false);
+    },
+    onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
+  });
+
+  // Delete company
+  const deleteCompany = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("companies").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      if (selectedCompany) setSelectedCompany(null);
+      toast({ title: "Εταιρεία διαγράφηκε." });
+    },
+    onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
+  });
+
+  // Add member
+  const addMember = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("company_members").insert({
+        company_id: selectedCompany,
+        user_id: newMemberUserId.trim(),
+        permissions: newMemberPerms,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-members", selectedCompany] });
+      toast({ title: "✅ Μέλος προστέθηκε!" });
+      setNewMemberUserId("");
+      setNewMemberPerms(["view_invoices"]);
+    },
+    onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
+  });
+
+  // Remove member
+  const removeMember = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("company_members").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-members", selectedCompany] });
+      toast({ title: "Μέλος αφαιρέθηκε." });
+    },
+    onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
+  });
+
+  // Update member permissions
+  const updatePerms = useMutation({
+    mutationFn: async ({ id, permissions }: { id: string; permissions: string[] }) => {
+      const { error } = await supabase
+        .from("company_members")
+        .update({ permissions } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-members", selectedCompany] });
+      toast({ title: "Δικαιώματα ενημερώθηκαν." });
+    },
+    onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
+  });
+
+  const togglePerm = (member: CompanyMember, perm: string) => {
+    const current = member.permissions || [];
+    const next = current.includes(perm)
+      ? current.filter((p) => p !== perm)
+      : [...current, perm];
+    updatePerms.mutate({ id: member.id, permissions: next });
+  };
+
+  const activeCompany = companies.find((c) => c.id === selectedCompany);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 pb-2 border-b border-border">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+          <Building2 className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-medium text-card-foreground">Διαχείριση Πελατών</h3>
+          <p className="text-xs text-muted-foreground">Εταιρείες, χρήστες & δικαιώματα</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setShowAddCompany(true)}>
+          <Plus className="mr-1 h-3 w-3" /> Νέα Εταιρεία
+        </Button>
+      </div>
+
+      {/* Add company form */}
+      {showAddCompany && (
+        <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/30">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-card-foreground">Νέα Εταιρεία</p>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowAddCompany(false)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Επωνυμία *</Label>
+              <Input value={newCompany.name} onChange={(e) => setNewCompany(p => ({ ...p, name: e.target.value }))} placeholder="π.χ. ACME ΑΕ" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">ΑΦΜ</Label>
+              <Input value={newCompany.vat_number} onChange={(e) => setNewCompany(p => ({ ...p, vat_number: e.target.value }))} placeholder="123456789" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Email</Label>
+              <Input value={newCompany.email} onChange={(e) => setNewCompany(p => ({ ...p, email: e.target.value }))} placeholder="info@acme.gr" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Τηλέφωνο</Label>
+              <Input value={newCompany.phone} onChange={(e) => setNewCompany(p => ({ ...p, phone: e.target.value }))} placeholder="210-1234567" />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label className="text-xs">Διεύθυνση</Label>
+              <Input value={newCompany.address} onChange={(e) => setNewCompany(p => ({ ...p, address: e.target.value }))} placeholder="Οδός, Πόλη" />
+            </div>
+          </div>
+          <Button size="sm" onClick={() => createCompany.mutate()} disabled={!newCompany.name.trim() || createCompany.isPending}>
+            {createCompany.isPending ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Plus className="mr-1 h-3 w-3" />}
+            Δημιουργία
+          </Button>
+        </div>
+      )}
+
+      {/* Company list */}
+      {loadingCompanies ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : companies.length === 0 ? (
+        <p className="text-center text-sm text-muted-foreground py-6">Δεν υπάρχουν εταιρείες. Δημιουργήστε μία για να ξεκινήσετε.</p>
+      ) : (
+        <div className="space-y-2">
+          {companies.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setSelectedCompany(c.id === selectedCompany ? null : c.id)}
+              className={`w-full text-left flex items-center justify-between rounded-lg border px-4 py-3 transition-all ${
+                c.id === selectedCompany ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+              }`}
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-card-foreground">{c.name}</p>
+                <p className="text-xs text-muted-foreground">{[c.vat_number, c.email].filter(Boolean).join(" · ") || "—"}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={(e) => { e.stopPropagation(); deleteCompany.mutate(c.id); }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Selected company: members */}
+      {selectedCompany && activeCompany && (
+        <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-medium text-card-foreground">{activeCompany.name} — Μέλη</h4>
+          </div>
+
+          {/* Add member */}
+          <div className="rounded-lg border border-border bg-card p-3 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground">Προσθήκη Μέλους</p>
+            <div className="space-y-2">
+              <Input
+                value={newMemberUserId}
+                onChange={(e) => setNewMemberUserId(e.target.value)}
+                placeholder="User ID (uuid)"
+                className="h-8 text-sm"
+              />
+              <div className="space-y-1.5">
+                {PERMISSION_OPTIONS.map((p) => (
+                  <label key={p.value} className="flex items-center gap-2 text-xs cursor-pointer">
+                    <Checkbox
+                      checked={newMemberPerms.includes(p.value)}
+                      onCheckedChange={(checked) => {
+                        setNewMemberPerms(prev =>
+                          checked ? [...prev, p.value] : prev.filter(x => x !== p.value)
+                        );
+                      }}
+                    />
+                    {p.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <Button size="sm" onClick={() => addMember.mutate()} disabled={!newMemberUserId.trim() || addMember.isPending}>
+              <UserPlus className="mr-1 h-3 w-3" /> Προσθήκη
+            </Button>
+          </div>
+
+          {/* Members list */}
+          {loadingMembers ? (
+            <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+          ) : members.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">Δεν υπάρχουν μέλη.</p>
+          ) : (
+            <div className="space-y-2">
+              {members.map((m) => (
+                <div key={m.id} className="rounded-lg border border-border bg-card px-3 py-2.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-mono text-muted-foreground truncate flex-1">{m.user_id}</p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => removeMember.mutate(m.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {PERMISSION_OPTIONS.map((p) => (
+                      <label key={p.value} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <Checkbox
+                          checked={(m.permissions || []).includes(p.value)}
+                          onCheckedChange={() => togglePerm(m, p.value)}
+                        />
+                        {p.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -513,6 +828,11 @@ export default function SettingsPage() {
             </TabsTrigger>
           )}
           {isAdmin && (
+            <TabsTrigger value="clients" className="gap-2">
+              <Building2 className="h-4 w-4" />Πελάτες
+            </TabsTrigger>
+          )}
+          {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
               <Shield className="h-4 w-4" />Χρήστες
             </TabsTrigger>
@@ -529,6 +849,11 @@ export default function SettingsPage() {
           {isAdmin && (
             <TabsContent value="erp" className="mt-0">
               <ErpTab />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="clients" className="mt-0">
+              <ClientsTab />
             </TabsContent>
           )}
           {isAdmin && (
