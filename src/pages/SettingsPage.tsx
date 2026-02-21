@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
   Save, Loader2, CheckCircle2, Plug, User, Shield, Palette, Trash2, Plus,
-  Building2, UserPlus, X,
+  Building2, UserPlus, X, ChevronRight,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -278,6 +278,16 @@ function ProfileTab() {
 
 // ─── Users Tab (admin only) ───────────────────────────────────────────────────
 
+type EnrichedUser = {
+  id: string;
+  email: string;
+  created_at: string;
+  roles: { id: string; role: string }[];
+  memberships: { id: string; company_id: string; company_name: string; permissions: string[] }[];
+};
+
+type CompanyOption = { id: string; name: string };
+
 function UsersTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -285,38 +295,78 @@ function UsersTab() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "accountant" | "user">("user");
   const [creatingUser, setCreatingUser] = useState(false);
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [assignCompanyId, setAssignCompanyId] = useState("");
 
-  const { data: roles = [], isLoading } = useQuery({
-    queryKey: ["user-roles-all"],
+  // Fetch all users with roles & memberships
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-users-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_roles").select("*").order("created_at");
+      const { data, error } = await supabase.functions.invoke("list-users");
       if (error) throw error;
-      return data as UserRole[];
+      if (data?.error) throw new Error(data.error);
+      return data as { users: EnrichedUser[]; companies: CompanyOption[] };
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("user_roles").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-roles-all"] });
-      toast({ title: "✅ Ρόλος αφαιρέθηκε." });
-    },
-    onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
-  });
+  const users = data?.users ?? [];
+  const companies = data?.companies ?? [];
 
   const roleLabel: Record<string, string> = {
     admin: "👑 Admin",
     accountant: "📋 Λογιστής",
-    user: "👤 Χρήστης",
+    user: "👤 Υπάλληλος",
   };
 
   const roleBadgeClass: Record<string, string> = {
     admin: "bg-warning/15 text-warning border-warning/30",
     accountant: "bg-info/15 text-info border-info/30",
     user: "bg-muted text-muted-foreground border-border",
+  };
+
+  const handleDeleteRole = async (roleId: string) => {
+    const { error } = await supabase.from("user_roles").delete().eq("id", roleId);
+    if (error) toast({ title: "Σφάλμα", description: error.message, variant: "destructive" });
+    else {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast({ title: "Ρόλος αφαιρέθηκε." });
+    }
+  };
+
+  const handleChangeRole = async (userId: string, oldRoleId: string | null, newRoleValue: string) => {
+    if (oldRoleId) {
+      const { error } = await supabase.from("user_roles").update({ role: newRoleValue } as any).eq("id", oldRoleId);
+      if (error) { toast({ title: "Σφάλμα", description: error.message, variant: "destructive" }); return; }
+    } else {
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRoleValue } as any);
+      if (error) { toast({ title: "Σφάλμα", description: error.message, variant: "destructive" }); return; }
+    }
+    queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+    toast({ title: "✅ Ρόλος ενημερώθηκε!" });
+  };
+
+  const handleAssignCompany = async (userId: string) => {
+    if (!assignCompanyId) return;
+    const { error } = await supabase.from("company_members").insert({
+      company_id: assignCompanyId,
+      user_id: userId,
+      permissions: ["view_invoices"],
+    } as any);
+    if (error) toast({ title: "Σφάλμα", description: error.message, variant: "destructive" });
+    else {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast({ title: "✅ Ανατέθηκε σε εταιρεία!" });
+      setAssignCompanyId("");
+    }
+  };
+
+  const handleRemoveMembership = async (membershipId: string) => {
+    const { error } = await supabase.from("company_members").delete().eq("id", membershipId);
+    if (error) toast({ title: "Σφάλμα", description: error.message, variant: "destructive" });
+    else {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast({ title: "Αφαιρέθηκε από εταιρεία." });
+    }
   };
 
   return (
@@ -327,37 +377,29 @@ function UsersTab() {
         </div>
         <div>
           <h3 className="font-medium text-card-foreground">Διαχείριση Χρηστών</h3>
-          <p className="text-xs text-muted-foreground">Ρόλοι & δικαιώματα χρηστών</p>
+          <p className="text-xs text-muted-foreground">Ρόλοι, εταιρείες & δικαιώματα</p>
         </div>
       </div>
 
-      {/* Add role by creating user */}
+      {/* Create user */}
       <div className="rounded-lg border border-border p-4 space-y-3">
-        <p className="text-sm font-medium text-card-foreground">Δημιουργία Χρήστη & Ανάθεση Ρόλου</p>
-        <div className="space-y-2">
-          <Label>Email *</Label>
-          <Input
-            placeholder="user@example.com"
-            type="email"
-            value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
-          />
+        <p className="text-sm font-medium text-card-foreground">Δημιουργία Νέου Χρήστη</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Email *</Label>
+            <Input placeholder="user@example.com" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Κωδικός *</Label>
+            <Input placeholder="Τουλάχιστον 6 χαρακτήρες" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Κωδικός *</Label>
-          <Input
-            placeholder="Τουλάχιστον 6 χαρακτήρες"
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Ρόλος</Label>
+        <div className="space-y-1">
+          <Label className="text-xs">Ρόλος</Label>
           <Select value={newRole} onValueChange={(v: any) => setNewRole(v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="user">👤 Χρήστης</SelectItem>
+              <SelectItem value="user">👤 Υπάλληλος</SelectItem>
               <SelectItem value="accountant">📋 Λογιστής</SelectItem>
               <SelectItem value="admin">👑 Admin</SelectItem>
             </SelectContent>
@@ -374,8 +416,8 @@ function UsersTab() {
               });
               if (error) throw error;
               if (data?.error) throw new Error(data.error);
-              queryClient.invalidateQueries({ queryKey: ["user-roles-all"] });
-              toast({ title: "✅ Χρήστης δημιουργήθηκε με ρόλο!" });
+              queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+              toast({ title: "✅ Χρήστης δημιουργήθηκε!" });
               setNewEmail("");
               setNewPassword("");
             } catch (err: any) {
@@ -390,31 +432,110 @@ function UsersTab() {
         </Button>
       </div>
 
-      {/* Roles list */}
+      {/* Users list */}
       {isLoading ? (
         <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-      ) : roles.length === 0 ? (
-        <p className="text-center text-sm text-muted-foreground py-6">Δεν υπάρχουν ρόλοι.</p>
+      ) : users.length === 0 ? (
+        <p className="text-center text-sm text-muted-foreground py-6">Δεν υπάρχουν χρήστες.</p>
       ) : (
         <div className="space-y-2">
-          {roles.map((r) => (
-            <div key={r.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-              <div className="space-y-0.5 min-w-0">
-                <p className="text-xs font-mono text-muted-foreground truncate">{r.user_id}</p>
-                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${roleBadgeClass[r.role]}`}>
-                  {roleLabel[r.role]}
-                </span>
+          {users.map((u) => {
+            const isExpanded = expandedUser === u.id;
+            const primaryRole = u.roles[0];
+            return (
+              <div key={u.id} className={`rounded-lg border transition-all ${isExpanded ? "border-primary bg-primary/5" : "border-border"}`}>
+                {/* User header */}
+                <button
+                  onClick={() => setExpandedUser(isExpanded ? null : u.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <p className="text-sm font-medium text-card-foreground truncate">{u.email}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {u.roles.length > 0 ? u.roles.map((r) => (
+                        <span key={r.id} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${roleBadgeClass[r.role] || roleBadgeClass.user}`}>
+                          {roleLabel[r.role] || r.role}
+                        </span>
+                      )) : (
+                        <span className="text-xs text-muted-foreground">Χωρίς ρόλο</span>
+                      )}
+                      {u.memberships.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          · {u.memberships.map((m) => m.company_name).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                </button>
+
+                {/* Expanded details */}
+                {isExpanded && (
+                  <div className="border-t border-border px-4 py-3 space-y-4">
+                    {/* Role management */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ρόλος</p>
+                      <Select
+                        value={primaryRole?.role || ""}
+                        onValueChange={(v) => handleChangeRole(u.id, primaryRole?.id || null, v)}
+                      >
+                        <SelectTrigger className="w-48 h-8 text-sm"><SelectValue placeholder="Επιλέξτε ρόλο" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">👤 Υπάλληλος</SelectItem>
+                          <SelectItem value="accountant">📋 Λογιστής</SelectItem>
+                          <SelectItem value="admin">👑 Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {primaryRole && (
+                        <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={() => handleDeleteRole(primaryRole.id)}>
+                          <Trash2 className="mr-1 h-3 w-3" /> Αφαίρεση ρόλου
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Company assignments */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Εταιρείες</p>
+                      {u.memberships.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {u.memberships.map((m) => (
+                            <div key={m.id} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-card-foreground">{m.company_name}</p>
+                                <p className="text-xs text-muted-foreground">{m.permissions.join(", ")}</p>
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => handleRemoveMembership(m.id)}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Δεν ανήκει σε εταιρεία.</p>
+                      )}
+
+                      {/* Assign to company */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <Select value={assignCompanyId} onValueChange={setAssignCompanyId}>
+                          <SelectTrigger className="flex-1 h-8 text-sm"><SelectValue placeholder="Επιλέξτε εταιρεία..." /></SelectTrigger>
+                          <SelectContent>
+                            {companies
+                              .filter((c) => !u.memberships.some((m) => m.company_id === c.id))
+                              .map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!assignCompanyId} onClick={() => handleAssignCompany(u.id)}>
+                          <Plus className="mr-1 h-3 w-3" /> Ανάθεση
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => deleteMutation.mutate(r.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
