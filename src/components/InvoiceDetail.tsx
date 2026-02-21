@@ -532,26 +532,15 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
                 {items.map((item, i) => (
                   <div key={i} className="rounded-lg border border-border bg-secondary/50 p-3 space-y-2">
                     <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Κωδικός</Label>
-                          <Input
-                            value={item.product_id ?? ""}
-                            onChange={(e) => updateItem(i, "product_id", e.target.value)}
-                            className="h-8 text-sm font-mono"
-                            readOnly={isAccountant}
-                            placeholder="SKU / Code"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Περιγραφή</Label>
-                          <Input
-                            value={item.description ?? ""}
-                            onChange={(e) => updateItem(i, "description", e.target.value)}
-                            className="h-8 text-sm"
-                            readOnly={isAccountant}
-                          />
-                        </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Κωδικός</Label>
+                        <Input
+                          value={item.product_id ?? ""}
+                          onChange={(e) => updateItem(i, "product_id", e.target.value)}
+                          className="h-8 text-sm font-mono"
+                          readOnly={isAccountant}
+                          placeholder="SKU / Code"
+                        />
                       </div>
                       {!isAccountant && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 mt-4 text-muted-foreground hover:text-destructive" onClick={() => removeItem(i)}>
