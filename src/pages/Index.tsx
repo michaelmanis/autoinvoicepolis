@@ -6,9 +6,12 @@ import ProjectsPage from "@/pages/ProjectsPage";
 import AccountantPage from "@/pages/AccountantPage";
 import AccountantFolderPage from "@/pages/AccountantFolderPage";
 import SettingsPage from "@/pages/SettingsPage";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Index = () => {
-  const [activeView, setActiveView] = useState("dashboard");
+  const { isAccountant, isAdmin } = useUserRole();
+  const isAccountantOnly = isAccountant && !isAdmin;
+  const [activeView, setActiveView] = useState(isAccountantOnly ? "accountant-folder" : "dashboard");
 
   return (
     <div className="flex min-h-screen bg-background">
