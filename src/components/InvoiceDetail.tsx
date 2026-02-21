@@ -480,9 +480,14 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
               <h3 className="mb-4 font-medium text-card-foreground">Είδη ({items.length})</h3>
               <div className="space-y-3">
                 {items.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg bg-secondary p-3 text-sm">
-                    <span className="flex-1 text-card-foreground">{item.description || "—"}</span>
-                    <span className="text-muted-foreground">
+                  <div key={i} className="flex items-center justify-between rounded-lg bg-secondary p-3 text-sm gap-3">
+                    <div className="flex-1 min-w-0">
+                      {item.product_id && (
+                        <span className="inline-block text-xs font-mono bg-muted px-1.5 py-0.5 rounded mr-2 text-muted-foreground">{item.product_id}</span>
+                      )}
+                      <span className="text-card-foreground">{item.description || "—"}</span>
+                    </div>
+                    <span className="text-muted-foreground whitespace-nowrap">
                       {item.quantity ?? 0} × {item.unit_price?.toFixed(2) ?? "0.00"} = {item.total?.toFixed(2) ?? "0.00"}
                     </span>
                   </div>
