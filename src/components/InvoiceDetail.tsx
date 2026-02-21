@@ -513,9 +513,16 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-medium text-card-foreground">Είδη ({items.length})</h3>
               {!isAccountant && (
-                <Button variant="outline" size="sm" onClick={addItem}>
-                  <Plus className="mr-1 h-3 w-3" /> Προσθήκη
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={addItem}>
+                    <Plus className="mr-1 h-3 w-3" /> Προσθήκη
+                  </Button>
+                  {items.length > 0 && (
+                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setItems([])}>
+                      <Trash2 className="mr-1 h-3 w-3" /> Διαγραφή όλων
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             {items.length === 0 ? (
