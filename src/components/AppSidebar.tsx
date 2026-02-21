@@ -16,15 +16,15 @@ import {
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
+const EMPLOYEE_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard",        id: "dashboard" },
   { icon: FileText,        label: "Τιμολόγια",        id: "invoices" },
   { icon: FolderOpen,      label: "Projects",          id: "projects" },
-  { icon: FolderCheck,     label: "Φάκελος Λογιστή",  id: "accountant-folder" },
 ];
 
 const ACCOUNTANT_ITEMS = [
-  { icon: UserCheck, label: "Έγκριση Λογιστή", id: "accountant" },
+  { icon: FolderCheck,     label: "Φάκελος Λογιστή",  id: "accountant-folder" },
+  { icon: UserCheck,       label: "Έγκριση Λογιστή",  id: "accountant" },
 ];
 
 const ADMIN_ITEMS = [
@@ -114,11 +114,16 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
     enabled: isAccountant || isAdmin,
   });
 
-  const allItems = [
-    ...NAV_ITEMS,
-    ...(isAccountant || isAdmin ? ACCOUNTANT_ITEMS : []),
-    ...(isAdmin ? ADMIN_ITEMS : []),
-  ];
+  // Accountant-only: sees only accountant items
+  // Admin: sees everything
+  // Employee/user: sees employee items + accountant folder
+  const allItems = isAccountant && !isAdmin
+    ? [...ACCOUNTANT_ITEMS]
+    : [
+        ...EMPLOYEE_ITEMS,
+        ...(isAdmin ? ACCOUNTANT_ITEMS : []),
+        ...(isAdmin ? ADMIN_ITEMS : []),
+      ];
 
   return (
     <aside
