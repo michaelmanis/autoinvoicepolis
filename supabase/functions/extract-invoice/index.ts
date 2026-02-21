@@ -110,7 +110,7 @@ serve(async (req) => {
                       items: {
                         type: "object",
                         properties: {
-                          product_id: { type: "string", description: "Unique product code, SKU, or article number if visible on the line item" },
+                          product_id: { type: "string", description: "Product code, article number, SKU, grade, model number, or catalog reference for this line item. Look in columns labeled ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY, or similar." },
                           description: { type: "string" },
                           quantity: { type: "number" },
                           unit_price: { type: "number" },
@@ -135,7 +135,7 @@ IMPORTANT: A single document may contain MULTIPLE invoices (e.g. multiple pages 
 Carefully scan the ENTIRE document and identify ALL distinct invoices present.
 Return each invoice as a SEPARATE entry in the invoices array.
 If only one invoice exists, return an array with one item.
-For each line item, extract the product_id (product code, SKU, article number, or barcode) if visible on the invoice.
+For each line item, you MUST extract the product_id. Look for article numbers, product codes, SKUs, grades, model numbers, catalog references, or commodity names in columns like ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY. Examples: "70", "SENSICARE M 5000", "MS502", "XD-T83186", "BIOPOL VR 20". If no code exists, set product_id to null.
 Dates must be in YYYY-MM-DD format. Amounts must be numbers without currency symbols.
 If a field is not visible for a given invoice, set it to null.`;
 
