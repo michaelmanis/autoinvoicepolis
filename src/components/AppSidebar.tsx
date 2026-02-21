@@ -130,7 +130,7 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
       {/* Header */}
       {collapsed ? (
         <div className="flex flex-col items-center border-b border-sidebar-border py-3 gap-2">
-          <img src={consultingIcon} alt="Polis Analytica" className="h-6 w-6 object-contain" />
+          <img src={consultingIcon} alt="Polis Analytica" className="h-6 w-6 object-contain brightness-0 invert" />
           <button
             onClick={() => setCollapsed(false)}
             className="flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -141,7 +141,7 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
         </div>
       ) : (
         <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
-          <img src={polisLogo} alt="Polis Analytica" className="h-12 w-auto object-contain mx-auto" />
+          <img src={polisLogo} alt="Polis Analytica" className="h-12 w-auto object-contain mx-auto brightness-0 invert" />
           <button
             onClick={() => setCollapsed(true)}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
