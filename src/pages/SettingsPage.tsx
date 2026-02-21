@@ -282,7 +282,9 @@ function UsersTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "accountant" | "user">("user");
+  const [creatingUser, setCreatingUser] = useState(false);
 
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ["user-roles-all"],
@@ -329,17 +331,26 @@ function UsersTab() {
         </div>
       </div>
 
-      {/* Add role by user_id */}
+      {/* Add role by creating user */}
       <div className="rounded-lg border border-border p-4 space-y-3">
-        <p className="text-sm font-medium text-card-foreground">Προσθήκη Ρόλου</p>
+        <p className="text-sm font-medium text-card-foreground">Δημιουργία Χρήστη & Ανάθεση Ρόλου</p>
         <div className="space-y-2">
-          <Label>User ID</Label>
+          <Label>Email *</Label>
           <Input
-            placeholder="uuid του χρήστη"
+            placeholder="user@example.com"
+            type="email"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">Βρείτε το user ID από το backend.</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Κωδικός *</Label>
+          <Input
+            placeholder="Τουλάχιστον 6 χαρακτήρες"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label>Ρόλος</Label>
@@ -354,21 +365,28 @@ function UsersTab() {
         </div>
         <Button
           size="sm"
-          disabled={!newEmail.trim()}
+          disabled={!newEmail.trim() || !newPassword.trim() || creatingUser}
           onClick={async () => {
-            const { error } = await supabase
-              .from("user_roles")
-              .insert({ user_id: newEmail.trim(), role: newRole });
-            if (error) {
-              toast({ title: "Σφάλμα", description: error.message, variant: "destructive" });
-            } else {
+            setCreatingUser(true);
+            try {
+              const { data, error } = await supabase.functions.invoke("create-user", {
+                body: { email: newEmail.trim(), password: newPassword, role: newRole },
+              });
+              if (error) throw error;
+              if (data?.error) throw new Error(data.error);
               queryClient.invalidateQueries({ queryKey: ["user-roles-all"] });
-              toast({ title: "✅ Ρόλος προστέθηκε!" });
+              toast({ title: "✅ Χρήστης δημιουργήθηκε με ρόλο!" });
               setNewEmail("");
+              setNewPassword("");
+            } catch (err: any) {
+              toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
+            } finally {
+              setCreatingUser(false);
             }
           }}
         >
-          <Plus className="mr-2 h-4 w-4" />Προσθήκη
+          {creatingUser ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+          Δημιουργία
         </Button>
       </div>
 
@@ -519,8 +537,10 @@ function ClientsTab() {
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [newCompany, setNewCompany] = useState({ name: "", vat_number: "", address: "", phone: "", email: "" });
-  const [newMemberUserId, setNewMemberUserId] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberPassword, setNewMemberPassword] = useState("");
   const [newMemberPerms, setNewMemberPerms] = useState<string[]>(["view_invoices"]);
+  const [creatingMember, setCreatingMember] = useState(false);
 
   // Fetch companies
   const { data: companies = [], isLoading: loadingCompanies } = useQuery({
@@ -577,24 +597,32 @@ function ClientsTab() {
     onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
   });
 
-  // Add member
-  const addMember = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("company_members").insert({
-        company_id: selectedCompany,
-        user_id: newMemberUserId.trim(),
-        permissions: newMemberPerms,
-      } as any);
+  // Add member via create-user edge function
+  const handleAddMember = async () => {
+    if (!newMemberEmail.trim() || !newMemberPassword.trim()) return;
+    setCreatingMember(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: {
+          email: newMemberEmail.trim(),
+          password: newMemberPassword,
+          company_id: selectedCompany,
+          permissions: newMemberPerms,
+        },
+      });
       if (error) throw error;
-    },
-    onSuccess: () => {
+      if (data?.error) throw new Error(data.error);
       queryClient.invalidateQueries({ queryKey: ["company-members", selectedCompany] });
-      toast({ title: "✅ Μέλος προστέθηκε!" });
-      setNewMemberUserId("");
+      toast({ title: "✅ Χρήστης δημιουργήθηκε & προστέθηκε!" });
+      setNewMemberEmail("");
+      setNewMemberPassword("");
       setNewMemberPerms(["view_invoices"]);
-    },
-    onError: (err: any) => toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
-  });
+    } catch (err: any) {
+      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingMember(false);
+    }
+  };
 
   // Remove member
   const removeMember = useMutation({
@@ -730,14 +758,28 @@ function ClientsTab() {
 
           {/* Add member */}
           <div className="rounded-lg border border-border bg-card p-3 space-y-3">
-            <p className="text-xs font-medium text-muted-foreground">Προσθήκη Μέλους</p>
+            <p className="text-xs font-medium text-muted-foreground">Δημιουργία & Προσθήκη Μέλους</p>
             <div className="space-y-2">
-              <Input
-                value={newMemberUserId}
-                onChange={(e) => setNewMemberUserId(e.target.value)}
-                placeholder="User ID (uuid)"
-                className="h-8 text-sm"
-              />
+              <div className="space-y-1">
+                <Label className="text-xs">Email *</Label>
+                <Input
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  type="email"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Κωδικός *</Label>
+                <Input
+                  value={newMemberPassword}
+                  onChange={(e) => setNewMemberPassword(e.target.value)}
+                  placeholder="Τουλάχιστον 6 χαρακτήρες"
+                  type="password"
+                  className="h-8 text-sm"
+                />
+              </div>
               <div className="space-y-1.5">
                 {PERMISSION_OPTIONS.map((p) => (
                   <label key={p.value} className="flex items-center gap-2 text-xs cursor-pointer">
@@ -754,8 +796,9 @@ function ClientsTab() {
                 ))}
               </div>
             </div>
-            <Button size="sm" onClick={() => addMember.mutate()} disabled={!newMemberUserId.trim() || addMember.isPending}>
-              <UserPlus className="mr-1 h-3 w-3" /> Προσθήκη
+            <Button size="sm" onClick={handleAddMember} disabled={!newMemberEmail.trim() || !newMemberPassword.trim() || creatingMember}>
+              {creatingMember ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <UserPlus className="mr-1 h-3 w-3" />}
+              Δημιουργία Χρήστη
             </Button>
           </div>
 
