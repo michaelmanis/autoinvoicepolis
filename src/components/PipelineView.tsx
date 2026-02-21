@@ -122,58 +122,52 @@ export default function PipelineView() {
           <p className="text-sm text-muted-foreground">Σύνολο: {total} τιμολόγ{total === 1 ? "ιο" : "ια"}</p>
         </div>
 
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          {/* Bar Chart */}
-          <div className="flex-1 min-w-0">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={stageCounts} barCategoryGap="35%" margin={{ bottom: 50, left: 0, right: 8, top: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis
-                  dataKey="shortLabel"
-                  tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                  angle={-40}
-                  textAnchor="end"
-                  interval={0}
-                  height={60}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={28}
-                />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--secondary))" }} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]} minPointSize={2}>
-                  {stageCounts.map((entry) => (
-                    <Cell key={entry.status} fill={entry.barColor} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Stage breakdown cards */}
-          <div className="grid grid-cols-2 gap-2 lg:w-72 lg:grid-cols-1">
-            {stageCounts.map((stage) => {
-              const Icon = stage.icon;
-              const pct = total > 0 ? Math.round((stage.count / total) * 100) : 0;
-              return (
-                <div key={stage.status} className="flex items-center gap-3 rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
-                  <span className={`inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${stage.className}`}>
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs text-muted-foreground">{stage.label}</p>
-                    <p className="text-base font-semibold text-card-foreground leading-tight">{stage.count}</p>
-                  </div>
-                  <span className="text-sm font-medium text-muted-foreground">{pct}%</span>
+        {/* Stage breakdown cards */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+          {stageCounts.map((stage) => {
+            const Icon = stage.icon;
+            const pct = total > 0 ? Math.round((stage.count / total) * 100) : 0;
+            return (
+              <div key={stage.status} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
+                <span className={`inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${stage.className}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs text-muted-foreground leading-tight">{stage.label}</p>
+                  <p className="text-sm font-semibold text-card-foreground leading-tight">{stage.count} <span className="text-xs font-normal text-muted-foreground">({pct}%)</span></p>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Bar Chart */}
+        <div className="w-full">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={stageCounts} barCategoryGap="20%" margin={{ bottom: 5, left: 0, right: 8, top: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="shortLabel"
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                axisLine={false}
+                tickLine={false}
+                width={28}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--secondary))" }} />
+              <Bar dataKey="count" radius={[6, 6, 0, 0]} minPointSize={4}>
+                {stageCounts.map((entry) => (
+                  <Cell key={entry.status} fill={entry.barColor} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
