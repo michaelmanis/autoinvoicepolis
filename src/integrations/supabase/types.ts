@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      companies: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
+      company_members: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          permissions: Database["public"]["Enums"]["company_permission"][]
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          permissions?: Database["public"]["Enums"]["company_permission"][]
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          permissions?: Database["public"]["Enums"]["company_permission"][]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       erp_settings: {
         Row: {
           api_key: string
@@ -88,6 +153,7 @@ export type Database = {
       invoices: {
         Row: {
           amount: number | null
+          company_id: string | null
           created_at: string
           currency: string | null
           due_date: string | null
@@ -108,6 +174,7 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          company_id?: string | null
           created_at?: string
           currency?: string | null
           due_date?: string | null
@@ -128,6 +195,7 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          company_id?: string | null
           created_at?: string
           currency?: string | null
           due_date?: string | null
@@ -148,6 +216,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -158,6 +233,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          company_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -167,6 +243,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -176,6 +253,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -184,7 +262,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -212,6 +298,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_company_permission: {
+        Args: {
+          _company_id: string
+          _permission: Database["public"]["Enums"]["company_permission"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -219,9 +313,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_member: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "accountant" | "user"
+      company_permission:
+        | "view_invoices"
+        | "upload_edit"
+        | "approve_erp"
+        | "manage_projects"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -350,6 +453,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "accountant", "user"],
+      company_permission: [
+        "view_invoices",
+        "upload_edit",
+        "approve_erp",
+        "manage_projects",
+      ],
     },
   },
 } as const
