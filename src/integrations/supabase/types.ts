@@ -97,6 +97,7 @@ export type Database = {
           invoice_date: string | null
           invoice_number: string | null
           items: Json | null
+          notes: string | null
           project_id: string | null
           raw_ocr_text: string | null
           status: string
@@ -116,6 +117,7 @@ export type Database = {
           invoice_date?: string | null
           invoice_number?: string | null
           items?: Json | null
+          notes?: string | null
           project_id?: string | null
           raw_ocr_text?: string | null
           status?: string
@@ -135,6 +137,7 @@ export type Database = {
           invoice_date?: string | null
           invoice_number?: string | null
           items?: Json | null
+          notes?: string | null
           project_id?: string | null
           raw_ocr_text?: string | null
           status?: string

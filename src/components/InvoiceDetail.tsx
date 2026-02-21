@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -11,7 +12,7 @@ import {
 import {
   ArrowLeft, Save, CheckCircle2, Database, Loader2, FileText,
   ExternalLink, ChevronLeft, ChevronRight, UserCheck, FolderOpen, FolderCheck,
-  History, Clock,
+  History, Clock, Plus, Trash2, MessageSquare,
 } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -282,7 +283,22 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
   const patchForm = (updates: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...updates }));
 
-  const items: any[] = Array.isArray(invoice.items) ? invoice.items : [];
+  const [items, setItems] = useState<any[]>(
+    Array.isArray(invoice.items) ? invoice.items : []
+  );
+  const [notes, setNotes] = useState(
+    (invoice as any).notes ?? ""
+  );
+
+  const updateItem = (index: number, field: string, value: any) => {
+    setItems((prev) => prev.map((it, i) => i === index ? { ...it, [field]: value } : it));
+  };
+  const removeItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+  const addItem = () => {
+    setItems((prev) => [...prev, { product_id: "", description: "", quantity: 0, unit_price: 0, total: 0 }]);
+  };
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects"],
@@ -307,7 +323,9 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
           currency: data.currency,
           status: data.status,
           project_id: data.project_id || null,
-        })
+          items: items as any,
+          notes: notes || null,
+        } as any)
         .eq("id", invoice.id);
       if (error) throw error;
     },
@@ -475,26 +493,105 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
             projects={projects as { id: string; name: string }[]}
           />
 
-          {items.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-card">
-              <h3 className="mb-4 font-medium text-card-foreground">Είδη ({items.length})</h3>
+          {/* Notes / Comments */}
+          <div className="rounded-xl border border-border bg-card p-6 shadow-card">
+            <h3 className="mb-3 font-medium text-card-foreground flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              Σχόλια
+            </h3>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Προσθήκη σχολίων για αυτό το τιμολόγιο…"
+              className="min-h-[80px]"
+              readOnly={isAccountant}
+            />
+          </div>
+
+          {/* Editable Items */}
+          <div className="rounded-xl border border-border bg-card p-6 shadow-card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-card-foreground">Είδη ({items.length})</h3>
+              {!isAccountant && (
+                <Button variant="outline" size="sm" onClick={addItem}>
+                  <Plus className="mr-1 h-3 w-3" /> Προσθήκη
+                </Button>
+              )}
+            </div>
+            {items.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Δεν υπάρχουν είδη</p>
+            ) : (
               <div className="space-y-3">
                 {items.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg bg-secondary p-3 text-sm gap-3">
-                    <div className="flex-1 min-w-0">
-                      {item.product_id && (
-                        <span className="inline-block text-xs font-mono bg-muted px-1.5 py-0.5 rounded mr-2 text-muted-foreground">{item.product_id}</span>
+                  <div key={i} className="rounded-lg border border-border bg-secondary/50 p-3 space-y-2">
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-start">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Κωδικός</Label>
+                          <Input
+                            value={item.product_id ?? ""}
+                            onChange={(e) => updateItem(i, "product_id", e.target.value)}
+                            className="h-8 text-sm font-mono"
+                            readOnly={isAccountant}
+                            placeholder="SKU / Code"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Περιγραφή</Label>
+                          <Input
+                            value={item.description ?? ""}
+                            onChange={(e) => updateItem(i, "description", e.target.value)}
+                            className="h-8 text-sm"
+                            readOnly={isAccountant}
+                          />
+                        </div>
+                      </div>
+                      {!isAccountant && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 mt-4 text-muted-foreground hover:text-destructive" onClick={() => removeItem(i)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       )}
-                      <span className="text-card-foreground">{item.description || "—"}</span>
                     </div>
-                    <span className="text-muted-foreground whitespace-nowrap">
-                      {item.quantity ?? 0} × {item.unit_price?.toFixed(2) ?? "0.00"} = {item.total?.toFixed(2) ?? "0.00"}
-                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Ποσότητα</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.quantity ?? 0}
+                          onChange={(e) => updateItem(i, "quantity", parseFloat(e.target.value) || 0)}
+                          className="h-8 text-sm"
+                          readOnly={isAccountant}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Τιμή Μονάδας</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price ?? 0}
+                          onChange={(e) => updateItem(i, "unit_price", parseFloat(e.target.value) || 0)}
+                          className="h-8 text-sm"
+                          readOnly={isAccountant}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Σύνολο</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.total ?? 0}
+                          onChange={(e) => updateItem(i, "total", parseFloat(e.target.value) || 0)}
+                          className="h-8 text-sm"
+                          readOnly={isAccountant}
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
