@@ -135,7 +135,15 @@ IMPORTANT: A single document may contain MULTIPLE invoices (e.g. multiple pages 
 Carefully scan the ENTIRE document and identify ALL distinct invoices present.
 Return each invoice as a SEPARATE entry in the invoices array.
 If only one invoice exists, return an array with one item.
-For each line item, you MUST extract the product_id. The product code is often EMBEDDED INSIDE the product description/name — it is usually an alphanumeric code (letters+numbers) that appears after or within the product name. For example: in "POLYMER POWDER ACCURATE 5011N", the product_id is "5011N". In "SENSICARE M 5000", it is "M 5000". In "BIOPOL VR 20", it is "VR 20". Also look in dedicated columns labeled ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY. If no code can be identified at all, set product_id to null.
+
+PRODUCT CODE EXTRACTION — CRITICAL RULES:
+For each line item, you MUST extract the product_id. Follow this priority order:
+1. Look for a "Customs Tariff" / "HS Code" / "Tariff Number" / "Δασμολογική Κλάση" number — this is usually a long numeric code like "3204190090". This is the PREFERRED product_id.
+2. If no tariff code exists, look in dedicated columns labeled ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY.
+3. If no dedicated column exists, the product code may be EMBEDDED INSIDE the product description/name — usually an alphanumeric code. For example: in "POLYMER POWDER ACCURATE 5011N", the product_id is "5011N". In "SENSICARE M 5000", it is "M 5000".
+4. If no code can be identified at all, set product_id to null.
+
+AMOUNT FORMAT: All numeric amounts (unit_price, total, amount) must be numbers rounded to exactly 2 decimal places. For example: 747.60, not 747.6 or 747.600.
 Dates must be in YYYY-MM-DD format. Amounts must be numbers without currency symbols.
 If a field is not visible for a given invoice, set it to null.`;
 

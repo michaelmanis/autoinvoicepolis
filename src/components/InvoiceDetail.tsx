@@ -635,7 +635,7 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
                         <Input
                           type="number"
                           step="0.01"
-                          value={item.unit_price ?? 0}
+                          value={typeof item.unit_price === "number" ? item.unit_price.toFixed(2) : (item.unit_price ?? "0.00")}
                           onChange={(e) => updateItem(i, "unit_price", parseFloat(e.target.value) || 0)}
                           className="h-8 text-sm"
                           readOnly={isAccountant}
@@ -646,7 +646,7 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
                         <Input
                           type="number"
                           step="0.01"
-                          value={item.total ?? 0}
+                          value={typeof item.total === "number" ? item.total.toFixed(2) : (item.total ?? "0.00")}
                           className="h-8 text-sm bg-muted/50"
                           readOnly
                         />
