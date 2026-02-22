@@ -50,8 +50,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { action, user_id, role } = await req.json();
+    const body = await req.json();
+    const action = typeof body.action === "string" ? body.action.trim() : "";
+    const user_id = typeof body.user_id === "string" ? body.user_id.trim() : "";
+    const role = typeof body.role === "string" ? body.role.trim() : "";
 
+    // Validate action
+    const validActions = ["ban", "unban", "delete", "bulk_assign_role"];
+    if (!action || !validActions.includes(action)) {
+      return new Response(JSON.stringify({ error: `Invalid action. Must be one of: ${validActions.join(", ")}` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate user_id (UUID or comma-separated UUIDs for bulk)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!user_id) {
       return new Response(JSON.stringify({ error: "user_id is required" }), {
         status: 400,
@@ -59,8 +73,41 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action !== "bulk_assign_role" && !uuidRegex.test(user_id)) {
+      return new Response(JSON.stringify({ error: "Invalid user_id format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "bulk_assign_role") {
+      const ids = user_id.split(",").map((id: string) => id.trim());
+      if (ids.some((id: string) => !uuidRegex.test(id))) {
+        return new Response(JSON.stringify({ error: "Invalid user_id format in bulk list" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (ids.length > 50) {
+        return new Response(JSON.stringify({ error: "Maximum 50 users per bulk operation" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Validate role for bulk_assign_role
+    const validRoles = ["admin", "accountant", "user"];
+    if (action === "bulk_assign_role" && (!role || !validRoles.includes(role))) {
+      return new Response(JSON.stringify({ error: `Invalid role. Must be one of: ${validRoles.join(", ")}` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Prevent self-actions
-    if (user_id === caller.id && (action === "delete" || action === "ban")) {
+    const singleUserId = action !== "bulk_assign_role" ? user_id : null;
+    if (singleUserId === caller.id && (action === "delete" || action === "ban")) {
       return new Response(JSON.stringify({ error: "Cannot perform this action on yourself" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

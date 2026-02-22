@@ -37,16 +37,22 @@ serve(async (req) => {
       });
     }
 
-    const { invoice_id, target_status } = await req.json();
-    if (!invoice_id) {
-      return new Response(JSON.stringify({ error: "invoice_id is required" }), {
+    const body = await req.json();
+    const invoice_id = typeof body.invoice_id === "string" ? body.invoice_id.trim() : "";
+    const target_status = typeof body.target_status === "string" ? body.target_status.trim() : "";
+
+    // Validate invoice_id (UUID format)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!invoice_id || !uuidRegex.test(invoice_id)) {
+      return new Response(JSON.stringify({ error: "Valid invoice_id (UUID) is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // target_status: "accountant_pending" (ERP send) or "accountant_approved" (accountant approval)
-    const finalStatus = target_status || "accountant_approved";
+    // Validate target_status
+    const validStatuses = ["accountant_pending", "accountant_approved"];
+    const finalStatus = target_status && validStatuses.includes(target_status) ? target_status : "accountant_approved";
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
