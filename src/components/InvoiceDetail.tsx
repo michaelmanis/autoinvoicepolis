@@ -36,8 +36,16 @@ function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string 
   const isPdf = fileName.toLowerCase().endsWith(".pdf");
   const isImage = /\.(png|jpe?g|webp|gif)$/i.test(fileName);
 
-  const handleOpen = () => {
-    window.open(fileUrl, "_blank", "noopener,noreferrer");
+  const handleOpen = async () => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
+    } catch {
+      // Fallback to direct URL
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
   if (!isPdf && !isImage) {
