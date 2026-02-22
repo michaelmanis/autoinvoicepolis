@@ -14,9 +14,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
   Save, Loader2, CheckCircle2, Plug, User, Shield, Palette, Trash2, Plus,
-  Building2, UserPlus, X, ChevronRight,
+  Building2, UserPlus, X, ChevronRight, Ban, History, FileSpreadsheet,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import AuditLogTab from "@/components/admin/AuditLogTab";
+import DataExportTab from "@/components/admin/DataExportTab";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -282,6 +284,7 @@ type EnrichedUser = {
   id: string;
   email: string;
   created_at: string;
+  banned_until: string | null;
   roles: { id: string; role: string }[];
   memberships: { id: string; company_id: string; company_name: string; permissions: string[] }[];
 };
@@ -297,6 +300,9 @@ function UsersTab() {
   const [creatingUser, setCreatingUser] = useState(false);
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [assignCompanyId, setAssignCompanyId] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [bulkRole, setBulkRole] = useState<string>("");
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Fetch all users with roles & memberships
   const { data, isLoading } = useQuery({
@@ -369,6 +375,68 @@ function UsersTab() {
     }
   };
 
+  const handleBanUser = async (userId: string, ban: boolean) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-user", {
+        body: { action: ban ? "ban" : "unban", user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast({ title: ban ? "Χρήστης απενεργοποιήθηκε." : "Χρήστης ενεργοποιήθηκε." });
+    } catch (err: any) {
+      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον χρήστη; Η ενέργεια είναι μη αναστρέψιμη.")) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-user", {
+        body: { action: "delete", user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast({ title: "Χρήστης διαγράφηκε." });
+    } catch (err: any) {
+      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleBulkAssignRole = async () => {
+    if (selectedUsers.size === 0 || !bulkRole) return;
+    setBulkLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-user", {
+        body: { action: "bulk_assign_role", user_id: [...selectedUsers].join(","), role: bulkRole },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast({ title: `✅ Ρόλος ανατέθηκε σε ${selectedUsers.size} χρήστες!` });
+      setSelectedUsers(new Set());
+      setBulkRole("");
+    } catch (err: any) {
+      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const toggleSelectUser = (id: string) => {
+    setSelectedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === users.length) setSelectedUsers(new Set());
+    else setSelectedUsers(new Set(users.map(u => u.id)));
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3 pb-2 border-b border-border">
@@ -432,6 +500,36 @@ function UsersTab() {
         </Button>
       </div>
 
+      {/* Bulk actions bar */}
+      {selectedUsers.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
+          <Checkbox
+            checked={selectedUsers.size === users.length}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium text-card-foreground">
+            {selectedUsers.size} επιλεγμένοι
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <Select value={bulkRole} onValueChange={setBulkRole}>
+              <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Ρόλος..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">👤 Υπάλληλος</SelectItem>
+                <SelectItem value="accountant">📋 Λογιστής</SelectItem>
+                <SelectItem value="admin">👑 Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant="default" className="h-8 text-xs" disabled={!bulkRole || bulkLoading} onClick={handleBulkAssignRole}>
+              {bulkLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+              Ανάθεση Ρόλου
+            </Button>
+            <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setSelectedUsers(new Set())}>
+              Ακύρωση
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Users list */}
       {isLoading ? (
         <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -439,35 +537,58 @@ function UsersTab() {
         <p className="text-center text-sm text-muted-foreground py-6">Δεν υπάρχουν χρήστες.</p>
       ) : (
         <div className="space-y-2">
+          {/* Select all */}
+          <div className="flex items-center gap-2 px-4 py-1">
+            <Checkbox
+              checked={selectedUsers.size === users.length && users.length > 0}
+              onCheckedChange={toggleSelectAll}
+            />
+            <span className="text-xs text-muted-foreground">Επιλογή όλων</span>
+          </div>
           {users.map((u) => {
             const isExpanded = expandedUser === u.id;
             const primaryRole = u.roles[0];
+            const isBanned = !!u.banned_until && new Date(u.banned_until) > new Date();
             return (
-              <div key={u.id} className={`rounded-lg border transition-all ${isExpanded ? "border-primary bg-primary/5" : "border-border"}`}>
+              <div key={u.id} className={`rounded-lg border transition-all ${isBanned ? "border-destructive/30 bg-destructive/5" : isExpanded ? "border-primary bg-primary/5" : "border-border"}`}>
                 {/* User header */}
-                <button
-                  onClick={() => setExpandedUser(isExpanded ? null : u.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left"
-                >
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="text-sm font-medium text-card-foreground truncate">{u.email}</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {u.roles.length > 0 ? u.roles.map((r) => (
-                        <span key={r.id} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${roleBadgeClass[r.role] || roleBadgeClass.user}`}>
-                          {roleLabel[r.role] || r.role}
-                        </span>
-                      )) : (
-                        <span className="text-xs text-muted-foreground">Χωρίς ρόλο</span>
-                      )}
-                      {u.memberships.length > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          · {u.memberships.map((m) => m.company_name).join(", ")}
-                        </span>
-                      )}
+                <div className="flex items-center gap-2 px-4 py-3">
+                  <Checkbox
+                    checked={selectedUsers.has(u.id)}
+                    onCheckedChange={() => toggleSelectUser(u.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    onClick={() => setExpandedUser(isExpanded ? null : u.id)}
+                    className="flex-1 flex items-center justify-between text-left min-w-0"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-card-foreground truncate">{u.email}</p>
+                        {isBanned && (
+                          <span className="inline-flex items-center rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                            <Ban className="mr-1 h-3 w-3" />Απενεργοποιημένος
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {u.roles.length > 0 ? u.roles.map((r) => (
+                          <span key={r.id} className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${roleBadgeClass[r.role] || roleBadgeClass.user}`}>
+                            {roleLabel[r.role] || r.role}
+                          </span>
+                        )) : (
+                          <span className="text-xs text-muted-foreground">Χωρίς ρόλο</span>
+                        )}
+                        {u.memberships.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            · {u.memberships.map((m) => m.company_name).join(", ")}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                </button>
+                    <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                  </button>
+                </div>
 
                 {/* Expanded details */}
                 {isExpanded && (
@@ -528,6 +649,30 @@ function UsersTab() {
                         </Select>
                         <Button size="sm" variant="outline" className="h-8 text-xs" disabled={!assignCompanyId} onClick={() => handleAssignCompany(u.id)}>
                           <Plus className="mr-1 h-3 w-3" /> Ανάθεση
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Ban / Delete actions */}
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ενέργειες Χρήστη</p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={isBanned ? "default" : "outline"}
+                          className="text-xs"
+                          onClick={() => handleBanUser(u.id, !isBanned)}
+                        >
+                          <Ban className="mr-1 h-3 w-3" />
+                          {isBanned ? "Ενεργοποίηση" : "Απενεργοποίηση"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="text-xs"
+                          onClick={() => handleDeleteUser(u.id)}
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" /> Διαγραφή
                         </Button>
                       </div>
                     </div>
@@ -979,7 +1124,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="w-full justify-start">
+        <TabsList className="w-full justify-start flex-wrap">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />Προφίλ
           </TabsTrigger>
@@ -999,6 +1144,16 @@ export default function SettingsPage() {
           {isAdmin && (
             <TabsTrigger value="users" className="gap-2">
               <Shield className="h-4 w-4" />Χρήστες
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger value="audit" className="gap-2">
+              <History className="h-4 w-4" />Ιστορικό
+            </TabsTrigger>
+          )}
+          {isAdmin && (
+            <TabsTrigger value="export" className="gap-2">
+              <FileSpreadsheet className="h-4 w-4" />Export
             </TabsTrigger>
           )}
         </TabsList>
@@ -1023,6 +1178,16 @@ export default function SettingsPage() {
           {isAdmin && (
             <TabsContent value="users" className="mt-0">
               <UsersTab />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="audit" className="mt-0">
+              <AuditLogTab />
+            </TabsContent>
+          )}
+          {isAdmin && (
+            <TabsContent value="export" className="mt-0">
+              <DataExportTab />
             </TabsContent>
           )}
         </div>
