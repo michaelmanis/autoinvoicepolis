@@ -12,7 +12,7 @@ import {
 import {
   ArrowLeft, Save, CheckCircle2, Database, Loader2, FileText,
   ExternalLink, ChevronLeft, ChevronRight, UserCheck, FolderOpen, FolderCheck,
-  History, Clock, Plus, Trash2, MessageSquare,
+  History, Clock, Plus, Trash2, MessageSquare, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -27,6 +27,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string }) {
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
+  const [scale, setScale] = useState(1.0);
   const onLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setPageNumber(1);
@@ -34,6 +35,10 @@ function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string 
 
   const isPdf = fileName.toLowerCase().endsWith(".pdf");
   const isImage = /\.(png|jpe?g|webp|gif)$/i.test(fileName);
+
+  const handleOpen = () => {
+    window.open(fileUrl, "_blank", "noopener,noreferrer");
+  };
 
   if (!isPdf && !isImage) {
     return (
@@ -51,24 +56,37 @@ function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string 
           <FileText className="h-4 w-4 text-muted-foreground" />
           {fileName || "Αρχείο Τιμολογίου"}
         </h3>
-        <a
-          href={fileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Άνοιγμα
-        </a>
+        <div className="flex items-center gap-2">
+          {isPdf && (
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale((s) => Math.max(0.5, s - 0.2))} disabled={scale <= 0.5}>
+                <ZoomOut className="h-3.5 w-3.5" />
+              </Button>
+              <span className="text-xs text-muted-foreground min-w-[3ch] text-center">{Math.round(scale * 100)}%</span>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale((s) => Math.min(2, s + 0.2))} disabled={scale >= 2}>
+                <ZoomIn className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={handleOpen}
+          >
+            <ExternalLink className="h-3 w-3" />
+            Άνοιγμα
+          </Button>
+        </div>
       </div>
 
       {isPdf ? (
-        <div className="flex flex-col items-center bg-muted/30">
+        <div className="flex flex-col items-center bg-muted/30 overflow-auto max-h-[75vh]">
           <Document
             file={fileUrl}
             onLoadSuccess={onLoadSuccess}
             loading={
-              <div className="flex items-center justify-center min-h-[400px] gap-2 text-muted-foreground">
+              <div className="flex items-center justify-center min-h-[500px] gap-2 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin" />
                 <span className="text-sm">Φόρτωση PDF…</span>
               </div>
@@ -77,22 +95,17 @@ function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string 
               <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 p-8 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground opacity-40" />
                 <p className="text-sm text-muted-foreground">Αδυναμία φόρτωσης PDF.</p>
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
+                <Button onClick={handleOpen} className="gap-2">
                   <ExternalLink className="h-4 w-4" />
                   Άνοιγμα σε νέα καρτέλα
-                </a>
+                </Button>
               </div>
             }
           >
-            <Page pageNumber={pageNumber} width={560} renderTextLayer renderAnnotationLayer />
+            <Page pageNumber={pageNumber} scale={scale} renderTextLayer renderAnnotationLayer />
           </Document>
           {numPages > 1 && (
-            <div className="flex items-center gap-3 py-3 border-t border-border w-full justify-center">
+            <div className="flex items-center gap-3 py-3 border-t border-border w-full justify-center sticky bottom-0 bg-card/90 backdrop-blur-sm">
               <Button variant="ghost" size="icon" onClick={() => setPageNumber((p) => Math.max(1, p - 1))} disabled={pageNumber <= 1}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -104,8 +117,8 @@ function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string 
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-center bg-muted/30 p-4 min-h-[400px]">
-          <img src={fileUrl} alt="Invoice" className="max-w-full max-h-[600px] object-contain rounded" />
+        <div className="flex items-center justify-center bg-muted/30 p-4 min-h-[400px] max-h-[75vh] overflow-auto">
+          <img src={fileUrl} alt="Invoice" className="max-w-full object-contain rounded cursor-pointer" onClick={handleOpen} />
         </div>
       )}
     </div>
