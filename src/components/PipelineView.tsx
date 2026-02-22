@@ -127,12 +127,16 @@ export default function PipelineView() {
           {stageCounts.map((stage) => {
             const Icon = stage.icon;
             const pct = total > 0 ? Math.round(stage.count / total * 100) : 0;
-            return;
-
-
-
-
-
+            return (
+              <div key={stage.status} className="rounded-lg border border-border bg-card p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4" style={{ color: stage.barColor }} />
+                  <span className="text-xs font-medium text-card-foreground truncate">{stage.shortLabel}</span>
+                </div>
+                <p className="text-lg font-bold text-card-foreground">{stage.count}</p>
+                <p className="text-xs text-muted-foreground">{pct}%</p>
+              </div>
+            );
 
 
 
