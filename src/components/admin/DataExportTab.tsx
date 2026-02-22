@@ -24,18 +24,25 @@ export default function DataExportTab() {
           .select("*")
           .order("created_at", { ascending: false });
         if (error) throw error;
-        rows = (data || []).map((inv: any) => ({
-          "Αρ. Τιμολογίου": inv.invoice_number || "",
-          "Προμηθευτής": inv.supplier || "",
-          "ΑΦΜ Προμηθευτή": inv.supplier_vat || "",
-          "Ποσό": inv.amount || "",
-          "Νόμισμα": inv.currency || "EUR",
-          "Ημ/νία Τιμολογίου": inv.invoice_date || "",
-          "Ημ/νία Λήξης": inv.due_date || "",
-          "Κατάσταση": inv.status || "",
-          "Σημειώσεις": inv.notes || "",
-          "Δημιουργία": inv.created_at ? new Date(inv.created_at).toLocaleDateString("el-GR") : "",
-        }));
+        rows = (data || []).map((inv: any) => {
+          // Συνένωση περιγραφών ειδών σε ένα string
+          const itemDescriptions = Array.isArray(inv.items)
+            ? inv.items.map((item: any) => item.description).filter(Boolean).join(" | ")
+            : "";
+          return {
+            "Αρ. Τιμολογίου": inv.invoice_number || "",
+            "Προμηθευτής": inv.supplier || "",
+            "ΑΦΜ Προμηθευτή": inv.supplier_vat || "",
+            "Περιγραφή Ειδών": itemDescriptions,
+            "Ποσό": inv.amount || "",
+            "Νόμισμα": inv.currency || "EUR",
+            "Ημ/νία Τιμολογίου": inv.invoice_date || "",
+            "Ημ/νία Λήξης": inv.due_date || "",
+            "Κατάσταση": inv.status || "",
+            "Σημειώσεις": inv.notes || "",
+            "Δημιουργία": inv.created_at ? new Date(inv.created_at).toLocaleDateString("el-GR") : "",
+          };
+        });
         filename = `invoices_${new Date().toISOString().slice(0, 10)}.xlsx`;
       } else if (type === "companies") {
         const { data, error } = await supabase
