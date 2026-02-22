@@ -135,7 +135,7 @@ IMPORTANT: A single document may contain MULTIPLE invoices (e.g. multiple pages 
 Carefully scan the ENTIRE document and identify ALL distinct invoices present.
 Return each invoice as a SEPARATE entry in the invoices array.
 If only one invoice exists, return an array with one item.
-For each line item, you MUST extract the product_id. Look for article numbers, product codes, SKUs, grades, model numbers, catalog references, or commodity names in columns like ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY. Examples: "70", "SENSICARE M 5000", "MS502", "XD-T83186", "BIOPOL VR 20". If no code exists, set product_id to null.
+For each line item, you MUST extract the product_id. The product code is often EMBEDDED INSIDE the product description/name — it is usually an alphanumeric code (letters+numbers) that appears after or within the product name. For example: in "POLYMER POWDER ACCURATE 5011N", the product_id is "5011N". In "SENSICARE M 5000", it is "M 5000". In "BIOPOL VR 20", it is "VR 20". Also look in dedicated columns labeled ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY. If no code can be identified at all, set product_id to null.
 Dates must be in YYYY-MM-DD format. Amounts must be numbers without currency symbols.
 If a field is not visible for a given invoice, set it to null.`;
 
