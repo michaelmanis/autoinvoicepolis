@@ -137,11 +137,15 @@ Return each invoice as a SEPARATE entry in the invoices array.
 If only one invoice exists, return an array with one item.
 
 PRODUCT CODE EXTRACTION — CRITICAL RULES:
-For each line item, you MUST extract the product_id. Follow this priority order:
-1. Look for a "Customs Tariff" / "HS Code" / "Tariff Number" / "Δασμολογική Κλάση" number — this is usually a long numeric code like "3204190090". This is the PREFERRED product_id.
-2. If no tariff code exists, look in dedicated columns labeled ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY.
-3. If no dedicated column exists, the product code may be EMBEDDED INSIDE the product description/name — usually an alphanumeric code. For example: in "POLYMER POWDER ACCURATE 5011N", the product_id is "5011N". In "SENSICARE M 5000", it is "M 5000".
-4. If no code can be identified at all, set product_id to null.
+The product code (product_id) is almost always EMBEDDED INSIDE the product description/name. It is typically an alphanumeric code (letters+numbers or just numbers) that appears AFTER the brand/product name. Examples:
+- "SENSICARE M 5000" → product_id = "M 5000"
+- "POLYMER POWDER ACCURATE 5011N" → product_id = "5011N"
+- "BIOPOL VR 20" → product_id = "VR 20"
+- "NOVISBRIGHT RED 4G" → product_id = "RED 4G"
+- "CHEMOFAST HB 100" → product_id = "HB 100"
+The pattern is: [BRAND NAME] [CODE]. The code is the last part that contains numbers (and possibly letters). Extract it carefully.
+Also check columns labeled ARTICLE, ITEM, CODE, GRADE, REF, SKU, COMMODITY for dedicated product codes.
+If no code can be identified at all, set product_id to null.
 
 AMOUNT FORMAT: All numeric amounts (unit_price, total, amount) must be numbers rounded to exactly 2 decimal places. For example: 747.60, not 747.6 or 747.600.
 Dates must be in YYYY-MM-DD format. Amounts must be numbers without currency symbols.
