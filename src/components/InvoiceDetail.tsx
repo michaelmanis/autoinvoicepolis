@@ -24,6 +24,22 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+/** Extract the storage path from a signed Supabase URL */
+function extractStoragePath(url: string): string {
+  try {
+    const u = new URL(url);
+    // Pattern: /storage/v1/object/sign/invoices/<path>?token=...
+    const match = u.pathname.match(/\/storage\/v1\/object\/sign\/invoices\/(.+)/);
+    if (match) return decodeURIComponent(match[1]);
+    // Pattern: /storage/v1/object/public/invoices/<path>
+    const pubMatch = u.pathname.match(/\/storage\/v1\/object\/public\/invoices\/(.+)/);
+    if (pubMatch) return decodeURIComponent(pubMatch[1]);
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string }) {
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
@@ -38,12 +54,16 @@ function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string 
 
   const handleOpen = async () => {
     try {
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await supabase.functions.invoke("proxy-file", {
+        body: { file_path: extractStoragePath(fileUrl) },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      });
+      if (resp.error) throw resp.error;
+      const blob = new Blob([resp.data], { type: resp.data.type || "application/pdf" });
       const blobUrl = URL.createObjectURL(blob);
       window.open(blobUrl, "_blank");
     } catch {
-      // Fallback to direct URL
       window.open(fileUrl, "_blank", "noopener,noreferrer");
     }
   };
