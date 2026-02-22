@@ -32,27 +32,34 @@ const INVALIDATE_KEYS = [
 ];
 
 function exportToExcel(monthKey: string, invoices: Invoice[]) {
-  const rows = invoices.map((inv) => ({
-    "Αριθμός Τιμολογίου": inv.invoice_number ?? "",
-    "Προμηθευτής":        inv.supplier ?? "",
-    "ΑΦΜ Προμηθευτή":    inv.supplier_vat ?? "",
-    "Ημερομηνία":         inv.invoice_date
-      ? new Date(inv.invoice_date).toLocaleDateString("el-GR")
-      : "",
-    "Λήξη":               inv.due_date
-      ? new Date(inv.due_date).toLocaleDateString("el-GR")
-      : "",
-    "Ποσό":               inv.amount ?? "",
-    "Νόμισμα":            inv.currency ?? "EUR",
-    "Κατάσταση":          inv.status === "accountant_approved" ? "Διασταυρώθηκε" : "Αναμονή Ελέγχου",
-  }));
+  const rows = invoices.map((inv) => {
+    // Συνένωση περιγραφών ειδών σε ένα string
+    const itemDescriptions = Array.isArray(inv.items)
+      ? (inv.items as any[]).map((item: any) => item.description).filter(Boolean).join(" | ")
+      : "";
+    return {
+      "Αριθμός Τιμολογίου": inv.invoice_number ?? "",
+      "Προμηθευτής":        inv.supplier ?? "",
+      "ΑΦΜ Προμηθευτή":    inv.supplier_vat ?? "",
+      "Περιγραφή Ειδών":    itemDescriptions,
+      "Ημερομηνία":         inv.invoice_date
+        ? new Date(inv.invoice_date).toLocaleDateString("el-GR")
+        : "",
+      "Λήξη":               inv.due_date
+        ? new Date(inv.due_date).toLocaleDateString("el-GR")
+        : "",
+      "Ποσό":               inv.amount ?? "",
+      "Νόμισμα":            inv.currency ?? "EUR",
+      "Κατάσταση":          inv.status === "accountant_approved" ? "Διασταυρώθηκε" : "Αναμονή Ελέγχου",
+    };
+  });
 
   const ws = XLSX.utils.json_to_sheet(rows);
 
   // Column widths
   ws["!cols"] = [
-    { wch: 22 }, { wch: 30 }, { wch: 16 }, { wch: 14 },
-    { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 20 },
+    { wch: 22 }, { wch: 30 }, { wch: 16 }, { wch: 40 },
+    { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 20 },
   ];
 
   const wb = XLSX.utils.book_new();
