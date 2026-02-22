@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle2, XCircle, FileText, Clock, Eye,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  CheckCircle2, XCircle, FileText, Clock, Eye, Undo2,
   ChevronDown, ChevronRight, FolderOpen, Folder, Euro, Download,
 } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
@@ -71,6 +75,8 @@ export default function AccountantFolderPage() {
   const queryClient = useQueryClient();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
+  /** State for confirmation dialog: { id, approved } or null */
+  const [confirmAction, setConfirmAction] = useState<{ id: string; approved: boolean } | null>(null);
 
   const { data: invoices, isLoading } = useAccountantFolderInvoices();
   const approveMutation = useAccountantMutation(INVALIDATE_KEYS);
@@ -222,7 +228,7 @@ export default function AccountantFolderPage() {
                               <>
                                 <Button
                                   variant="ghost" size="icon" className="h-8 w-8"
-                                  onClick={() => approveMutation.mutate({ id: inv.id, approved: true })}
+                                  onClick={() => setConfirmAction({ id: inv.id, approved: true })}
                                   disabled={approveMutation.isPending}
                                   title="Έγκριση"
                                 >
@@ -230,13 +236,23 @@ export default function AccountantFolderPage() {
                                 </Button>
                                 <Button
                                   variant="ghost" size="icon" className="h-8 w-8"
-                                  onClick={() => approveMutation.mutate({ id: inv.id, approved: false })}
+                                  onClick={() => setConfirmAction({ id: inv.id, approved: false })}
                                   disabled={approveMutation.isPending}
                                   title="Απόρριψη"
                                 >
                                   <XCircle className="h-4 w-4 text-destructive" />
                                 </Button>
                               </>
+                            )}
+                            {inv.status === "accountant_approved" && (
+                              <Button
+                                variant="ghost" size="icon" className="h-8 w-8"
+                                onClick={() => setConfirmAction({ id: inv.id, approved: false })}
+                                disabled={approveMutation.isPending}
+                                title="Αναίρεση Έγκρισης"
+                              >
+                                <Undo2 className="h-4 w-4 text-warning" />
+                              </Button>
                             )}
                           </div>
                         </div>
@@ -249,6 +265,35 @@ export default function AccountantFolderPage() {
           })}
         </div>
       )}
+
+      {/* Confirmation dialog for approve / reject / undo */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.approved ? "Επιβεβαίωση Έγκρισης" : "Επιβεβαίωση Απόρριψης / Αναίρεσης"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.approved
+                ? "Είστε σίγουροι ότι θέλετε να εγκρίνετε αυτό το τιμολόγιο; Μπορείτε να αναιρέσετε αργότερα."
+                : "Το τιμολόγιο θα επιστρέψει σε κατάσταση αναμονής ελέγχου."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction) {
+                  approveMutation.mutate(confirmAction);
+                  setConfirmAction(null);
+                }
+              }}
+            >
+              {confirmAction?.approved ? "Έγκριση" : "Συνέχεια"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
