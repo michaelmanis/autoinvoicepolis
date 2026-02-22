@@ -291,10 +291,29 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
   );
 
   const updateItem = (index: number, field: string, value: any) => {
-    setItems((prev) => prev.map((it, i) => i === index ? { ...it, [field]: value } : it));
+    setItems((prev) => {
+      const updated = prev.map((it, i) => {
+        if (i !== index) return it;
+        const patched = { ...it, [field]: value };
+        // Auto-calc total when qty or unit_price changes
+        if (field === "quantity" || field === "unit_price") {
+          patched.total = parseFloat(((patched.quantity || 0) * (patched.unit_price || 0)).toFixed(2));
+        }
+        return patched;
+      });
+      // Auto-sum all item totals into form amount
+      const sum = updated.reduce((s, it) => s + (parseFloat(it.total) || 0), 0);
+      patchForm({ amount: sum > 0 ? sum.toFixed(2) : "" });
+      return updated;
+    });
   };
   const removeItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
+    setItems((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      const sum = updated.reduce((s, it) => s + (parseFloat(it.total) || 0), 0);
+      patchForm({ amount: sum > 0 ? sum.toFixed(2) : "" });
+      return updated;
+    });
   };
   const addItem = () => {
     setItems((prev) => [...prev, { product_id: "", description: "", quantity: 0, unit_price: 0, total: 0 }]);
@@ -548,6 +567,17 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
                         </Button>
                       )}
                     </div>
+                    {/* Περιγραφή είδους */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Περιγραφή</Label>
+                      <Input
+                        value={item.description ?? ""}
+                        onChange={(e) => updateItem(i, "description", e.target.value)}
+                        className="h-8 text-sm"
+                        readOnly={isAccountant}
+                        placeholder="Περιγραφή προϊόντος/υπηρεσίας"
+                      />
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">Ποσότητα</Label>
@@ -577,9 +607,8 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
                           type="number"
                           step="0.01"
                           value={item.total ?? 0}
-                          onChange={(e) => updateItem(i, "total", parseFloat(e.target.value) || 0)}
-                          className="h-8 text-sm"
-                          readOnly={isAccountant}
+                          className="h-8 text-sm bg-muted/50"
+                          readOnly
                         />
                       </div>
                     </div>
