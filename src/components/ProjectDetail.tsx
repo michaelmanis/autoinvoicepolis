@@ -1,31 +1,31 @@
+/**
+ * ProjectDetail — Displays a single project's invoices with options to:
+ * - Assign existing unassigned invoices
+ * - Bulk upload new invoices (with AI extraction)
+ * - View/remove individual invoices
+ *
+ * Uses the shared Invoice type and STATUS_CONFIG from types/invoice.ts
+ * to avoid duplicate type definitions.
+ */
+
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
-  Upload,
-  FileText,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  Loader2,
-  Eye,
-  Trash2,
-  Plus,
-  Link2,
-  X,
+  ArrowLeft, Upload, FileText, CheckCircle2, Loader2,
+  Eye, Plus, Link2, X,
 } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import InvoiceDetail from "@/components/InvoiceDetail";
+import { STATUS_CONFIG, type Invoice } from "@/types/invoice";
+import type { UploadItem } from "@/hooks/useInvoiceUpload";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Project = {
   id: string;
@@ -35,52 +35,34 @@ type Project = {
   created_at: string;
 };
 
-type Invoice = {
-  id: string;
-  supplier: string | null;
-  amount: number | null;
-  currency: string | null;
-  invoice_number: string | null;
-  invoice_date: string | null;
-  status: string;
-  file_url: string | null;
-  file_name: string | null;
-  created_at: string;
-  updated_at: string;
-  supplier_vat: string | null;
-  due_date: string | null;
-  items: any;
-  raw_ocr_text: string | null;
-  project_id: string | null;
-};
-
-type UploadItem = {
-  file: File;
-  status: "pending" | "uploading" | "done" | "error";
-  error?: string;
-  count?: number; // number of invoices extracted from this file
-};
-
-const statusConfig: Record<string, { label: string; className: string; icon: any }> = {
-  draft: { label: "Draft", className: "bg-info/10 text-info", icon: Clock },
-  review: { label: "Αναμονή", className: "bg-warning/10 text-warning", icon: AlertCircle },
-  approved: { label: "Εγκρίθηκε", className: "bg-success/10 text-success", icon: CheckCircle2 },
-  submitted: { label: "Υποβλήθηκε", className: "bg-success/10 text-success", icon: CheckCircle2 },
-  accountant_pending: { label: "Αναμονή Λογιστή", className: "bg-warning/10 text-warning", icon: AlertCircle },
-  accountant_approved: { label: "Εγκρίθηκε (Λογιστής)", className: "bg-success/10 text-success", icon: CheckCircle2 },
-  error: { label: "Σφάλμα", className: "bg-destructive/10 text-destructive", icon: AlertCircle },
-};
-
 interface Props {
   project: Project;
   onBack: () => void;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Sanitise a filename for safe storage upload */
+function sanitizeFileName(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x00-\x7F]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_");
+}
+
+const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProjectDetail({ project, onBack }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // UI state
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -88,7 +70,9 @@ export default function ProjectDetail({ project, onBack }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-  // Invoices in this project
+  // ── Queries ───────────────────────────────────────────────────────────────
+
+  /** Invoices belonging to this project */
   const { data: projectInvoices, isLoading } = useQuery({
     queryKey: ["invoices", "project", project.id],
     queryFn: async () => {
@@ -102,7 +86,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
     },
   });
 
-  // All invoices without a project (for assign)
+  /** Invoices without a project — only fetched when the assign dialog is open */
   const { data: unassignedInvoices } = useQuery({
     queryKey: ["invoices", "unassigned"],
     queryFn: async () => {
@@ -117,6 +101,9 @@ export default function ProjectDetail({ project, onBack }: Props) {
     enabled: assignOpen,
   });
 
+  // ── Mutations ─────────────────────────────────────────────────────────────
+
+  /** Assign selected invoices to this project */
   const assignMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
@@ -131,11 +118,11 @@ export default function ProjectDetail({ project, onBack }: Props) {
       setAssignOpen(false);
       setSelectedIds([]);
     },
-    onError: (err: any) => {
-      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
-    },
+    onError: (err: any) =>
+      toast({ title: "Σφάλμα", description: err.message, variant: "destructive" }),
   });
 
+  /** Remove an invoice from this project (set project_id to null) */
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -150,12 +137,14 @@ export default function ProjectDetail({ project, onBack }: Props) {
     },
   });
 
+  // ── Upload handlers ───────────────────────────────────────────────────────
+
+  /** Validate and queue selected files */
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
 
-    const allowedTypes = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
-    const valid = files.filter((f) => allowedTypes.includes(f.type) && f.size <= 20 * 1024 * 1024);
+    const valid = files.filter((f) => ALLOWED_TYPES.includes(f.type) && f.size <= MAX_SIZE_BYTES);
     const invalid = files.length - valid.length;
 
     if (invalid > 0) {
@@ -167,10 +156,10 @@ export default function ProjectDetail({ project, onBack }: Props) {
     }
 
     setUploadQueue(valid.map((f) => ({ file: f, status: "pending" })));
-    // reset input so same files can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  /** Upload all queued files and invoke AI extraction for each */
   const runBulkUpload = async () => {
     if (!uploadQueue.length) return;
     setIsUploading(true);
@@ -189,22 +178,17 @@ export default function ProjectDetail({ project, onBack }: Props) {
       );
 
       try {
-        const safeFileName = item.file.name
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^\x00-\x7F]/g, "_")
-          .replace(/\s+/g, "_")
-          .replace(/_+/g, "_");
-        const filePath = `${user.id}/${Date.now()}_${safeFileName}`;
+        const filePath = `${user.id}/${Date.now()}_${sanitizeFileName(item.file.name)}`;
 
         const { error: uploadError } = await supabase.storage
           .from("invoices")
           .upload(filePath, item.file);
         if (uploadError) throw uploadError;
 
-        const { data: fnData, error: fnError } = await supabase.functions.invoke("extract-invoice", {
-          body: { file_path: filePath, file_name: item.file.name, project_id: project.id },
-        });
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          "extract-invoice",
+          { body: { file_path: filePath, file_name: item.file.name, project_id: project.id } },
+        );
         if (fnError) throw fnError;
 
         const count = (fnData as any)?.count ?? 1;
@@ -213,9 +197,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
         );
       } catch (err: any) {
         setUploadQueue((prev) =>
-          prev.map((x, idx) =>
-            idx === i ? { ...x, status: "error", error: err.message } : x
-          )
+          prev.map((x, idx) => (idx === i ? { ...x, status: "error", error: err.message } : x))
         );
       }
     }
@@ -223,7 +205,10 @@ export default function ProjectDetail({ project, onBack }: Props) {
     setIsUploading(false);
     queryClient.invalidateQueries({ queryKey: ["invoices"] });
 
-    const totalInvoices = uploadQueue.reduce((sum, q) => sum + (q.count ?? (q.status === "done" ? 1 : 0)), 0);
+    const totalInvoices = uploadQueue.reduce(
+      (sum, q) => sum + (q.count ?? (q.status === "done" ? 1 : 0)),
+      0,
+    );
     toast({ title: `Ολοκληρώθηκε! ${totalInvoices} τιμολόγιο/α εξήχθησαν` });
 
     setTimeout(() => {
@@ -231,6 +216,8 @@ export default function ProjectDetail({ project, onBack }: Props) {
       setUploadQueue([]);
     }, 1500);
   };
+
+  // ── Detail view ───────────────────────────────────────────────────────────
 
   if (selectedInvoice) {
     return (
@@ -243,6 +230,8 @@ export default function ProjectDetail({ project, onBack }: Props) {
       />
     );
   }
+
+  // ── Main render ───────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -258,7 +247,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
           )}
         </div>
         <div className="flex gap-2">
-          {/* Assign existing invoices */}
+          {/* Assign existing invoices dialog */}
           <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -319,8 +308,16 @@ export default function ProjectDetail({ project, onBack }: Props) {
             </DialogContent>
           </Dialog>
 
-          {/* Bulk upload */}
-          <Dialog open={uploadOpen} onOpenChange={(v) => { if (!isUploading) { setUploadOpen(v); if (!v) setUploadQueue([]); } }}>
+          {/* Bulk upload dialog */}
+          <Dialog
+            open={uploadOpen}
+            onOpenChange={(v) => {
+              if (!isUploading) {
+                setUploadOpen(v);
+                if (!v) setUploadQueue([]);
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Upload className="mr-2 h-4 w-4" />
@@ -332,10 +329,10 @@ export default function ProjectDetail({ project, onBack }: Props) {
                 <DialogTitle>Μαζικό Ανέβασμα Τιμολογίων</DialogTitle>
               </DialogHeader>
               <p className="text-sm text-muted-foreground">
-                Επιλέξτε ένα ή πολλά αρχεία (PDF, PNG, JPG). Το AI θα αναγνωρίσει αυτόματα τα δεδομένα κάθε τιμολογίου.
+                Επιλέξτε ένα ή πολλά αρχεία (PDF, PNG, JPG). Το AI θα αναγνωρίσει αυτόματα τα δεδομένα.
               </p>
 
-              {/* Drop / select area */}
+              {/* File selection area */}
               {!uploadQueue.length && (
                 <button
                   type="button"
@@ -344,7 +341,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
                 >
                   <Upload className="h-10 w-10 text-muted-foreground/50" />
                   <p className="text-sm text-muted-foreground">Κάντε κλικ για επιλογή αρχείων</p>
-                  <p className="text-xs text-muted-foreground/70">PDF, PNG, JPG, WebP — έως 20MB το αρχείο</p>
+                  <p className="text-xs text-muted-foreground/70">PDF, PNG, JPG, WebP — έως 20MB</p>
                 </button>
               )}
               <input
@@ -357,7 +354,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
                 disabled={isUploading}
               />
 
-              {/* Queue list */}
+              {/* Upload queue */}
               {uploadQueue.length > 0 && (
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {uploadQueue.map((item, idx) => (
@@ -367,22 +364,14 @@ export default function ProjectDetail({ project, onBack }: Props) {
                     >
                       <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <span className="flex-1 text-sm truncate">{item.file.name}</span>
-                      {item.status === "pending" && (
-                        <span className="text-xs text-muted-foreground">Αναμονή</span>
-                      )}
-                      {item.status === "uploading" && (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      )}
-                      {item.status === "done" && (
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                      )}
+                      {item.status === "pending" && <span className="text-xs text-muted-foreground">Αναμονή</span>}
+                      {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                      {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-success" />}
                       {item.status === "error" && (
                         <span className="text-xs text-destructive" title={item.error}>Σφάλμα</span>
                       )}
                       {!isUploading && item.status === "pending" && (
-                        <button
-                          onClick={() => setUploadQueue((prev) => prev.filter((_, i) => i !== idx))}
-                        >
+                        <button onClick={() => setUploadQueue((prev) => prev.filter((_, i) => i !== idx))}>
                           <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
                         </button>
                       )}
@@ -393,11 +382,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
 
               <div className="flex gap-2">
                 {!isUploading && (
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
+                  <Button variant="outline" className="flex-1" onClick={() => fileInputRef.current?.click()}>
                     <Plus className="mr-2 h-4 w-4" />
                     Προσθήκη αρχείων
                   </Button>
@@ -405,18 +390,12 @@ export default function ProjectDetail({ project, onBack }: Props) {
                 <Button
                   className="flex-1"
                   onClick={runBulkUpload}
-                  disabled={!uploadQueue.length || isUploading || uploadQueue.every(q => q.status === 'done')}
+                  disabled={!uploadQueue.length || isUploading || uploadQueue.every((q) => q.status === "done")}
                 >
                   {isUploading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Επεξεργασία...
-                    </>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία...</>
                   ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Ανέβασμα {uploadQueue.length > 0 ? `(${uploadQueue.filter(q => q.status === 'pending').length})` : ""}
-                    </>
+                    <><Upload className="mr-2 h-4 w-4" />Ανέβασμα {uploadQueue.filter((q) => q.status === "pending").length > 0 ? `(${uploadQueue.filter((q) => q.status === "pending").length})` : ""}</>
                   )}
                 </Button>
               </div>
@@ -440,7 +419,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
         <div className="rounded-xl border border-border bg-card shadow-card">
           <div className="divide-y divide-border">
             {projectInvoices.map((inv) => {
-              const status = statusConfig[inv.status] || statusConfig.draft;
+              const status = STATUS_CONFIG[inv.status] ?? STATUS_CONFIG.draft;
               const StatusIcon = status.icon;
               return (
                 <div
@@ -472,12 +451,7 @@ export default function ProjectDetail({ project, onBack }: Props) {
                       <Button variant="ghost" size="icon" onClick={() => setSelectedInvoice(inv)}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title="Αφαίρεση από project"
-                        onClick={() => removeMutation.mutate(inv.id)}
-                      >
+                      <Button variant="ghost" size="icon" title="Αφαίρεση από project" onClick={() => removeMutation.mutate(inv.id)}>
                         <X className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </div>

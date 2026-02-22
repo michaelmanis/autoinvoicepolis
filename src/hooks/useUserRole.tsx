@@ -1,3 +1,8 @@
+/**
+ * useUserRole — Fetches the current user's roles from the user_roles table.
+ * Provides convenience booleans (isAdmin, isAccountant) for role-based UI rendering.
+ */
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +20,7 @@ export function useUserRole() {
       setLoading(false);
       return;
     }
+
     supabase
       .from("user_roles")
       .select("role")

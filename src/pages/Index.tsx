@@ -1,3 +1,9 @@
+/**
+ * Index — Main layout page that renders the sidebar and switches between
+ * different views based on the active navigation item. Acts as an SPA shell
+ * with role-aware default view selection.
+ */
+
 import { useState } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import PipelineView from "@/components/PipelineView";
@@ -8,10 +14,26 @@ import AccountantFolderPage from "@/pages/AccountantFolderPage";
 import SettingsPage from "@/pages/SettingsPage";
 import { useUserRole } from "@/hooks/useUserRole";
 
+/** Maps view IDs to their components */
+const VIEW_MAP: Record<string, React.ComponentType> = {
+  dashboard: PipelineView,
+  invoices: InvoicesPage,
+  projects: ProjectsPage,
+  accountant: AccountantPage,
+  "accountant-folder": AccountantFolderPage,
+  settings: SettingsPage,
+};
+
 const Index = () => {
   const { isAccountant, isAdmin } = useUserRole();
   const isAccountantOnly = isAccountant && !isAdmin;
-  const [activeView, setActiveView] = useState(isAccountantOnly ? "accountant-folder" : "dashboard");
+
+  // Accountant-only users default to their folder view
+  const [activeView, setActiveView] = useState(
+    isAccountantOnly ? "accountant-folder" : "dashboard"
+  );
+
+  const ActiveComponent = VIEW_MAP[activeView] ?? PipelineView;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -20,14 +42,8 @@ const Index = () => {
         <header className="flex items-center border-b border-border bg-card px-8 py-4">
           <h1 className="text-xl font-semibold text-foreground">DocuHandler</h1>
         </header>
-
         <div className="animate-slide-in p-8">
-          {activeView === "dashboard"         && <PipelineView />}
-          {activeView === "invoices"          && <InvoicesPage />}
-          {activeView === "projects"          && <ProjectsPage />}
-          {activeView === "accountant"        && <AccountantPage />}
-          {activeView === "accountant-folder" && <AccountantFolderPage />}
-          {activeView === "settings"          && <SettingsPage />}
+          <ActiveComponent />
         </div>
       </main>
     </div>
@@ -35,4 +51,3 @@ const Index = () => {
 };
 
 export default Index;
-

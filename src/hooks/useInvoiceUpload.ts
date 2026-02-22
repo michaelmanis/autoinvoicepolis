@@ -1,18 +1,33 @@
+/**
+ * useInvoiceUpload — Manages the file upload queue for invoice processing.
+ * Validates file type/size, uploads to storage, and invokes the AI extraction
+ * edge function. Tracks per-file status so the UI can show progress.
+ */
+
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/** Represents a single file in the upload queue */
 export type UploadItem = {
   file: File;
   status: "pending" | "uploading" | "done" | "error";
   error?: string;
+  /** Number of invoices the AI extracted from this file */
   count?: number;
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Normalise a filename: strip diacritics, non-ASCII chars, and extra spaces */
 function sanitizeFileName(name: string): string {
   return name
     .normalize("NFD")
@@ -22,6 +37,7 @@ function sanitizeFileName(name: string): string {
     .replace(/_+/g, "_");
 }
 
+/** Filter files by allowed type/size and toast a warning for rejected ones */
 function validateFiles(files: File[], toast: ReturnType<typeof useToast>["toast"]): File[] {
   const valid = files.filter((f) => ALLOWED_TYPES.includes(f.type) && f.size <= MAX_SIZE_BYTES);
   const rejected = files.length - valid.length;
@@ -35,6 +51,8 @@ function validateFiles(files: File[], toast: ReturnType<typeof useToast>["toast"
   return valid;
 }
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
 export function useInvoiceUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [queue, setQueue] = useState<UploadItem[]>([]);
@@ -42,6 +60,7 @@ export function useInvoiceUpload() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  /** Validate and append files to the queue */
   const addFiles = (files: File[]) => {
     const valid = validateFiles(files, toast);
     if (valid.length) {
@@ -50,10 +69,17 @@ export function useInvoiceUpload() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  /** Remove a single pending item from the queue */
   const removeFromQueue = (index: number) => {
     setQueue((prev) => prev.filter((_, i) => i !== index));
   };
 
+  /**
+   * Upload all pending files in parallel:
+   * 1. Upload file to storage
+   * 2. Invoke extract-invoice edge function
+   * 3. Update queue status per file
+   */
   const runUpload = async () => {
     const pendingIndices = queue
       .map((q, i) => (q.status === "pending" ? i : -1))
@@ -70,19 +96,18 @@ export function useInvoiceUpload() {
       return;
     }
 
-    // Mark all pending as uploading at once
+    // Mark all pending items as uploading
     setQueue((prev) =>
       prev.map((x, idx) =>
         pendingIndices.includes(idx) ? { ...x, status: "uploading" } : x
       )
     );
 
-    // Process all files in parallel
+    // Process files in parallel
     const results = await Promise.allSettled(
       pendingIndices.map(async (i) => {
         const item = queue[i];
-        const safeName = sanitizeFileName(item.file.name);
-        const filePath = `${user.id}/${Date.now()}_${safeName}`;
+        const filePath = `${user.id}/${Date.now()}_${sanitizeFileName(item.file.name)}`;
 
         const { error: uploadError } = await supabase.storage
           .from("invoices")
@@ -91,12 +116,11 @@ export function useInvoiceUpload() {
 
         const { data: fnData, error: fnError } = await supabase.functions.invoke(
           "extract-invoice",
-          { body: { file_path: filePath, file_name: item.file.name } }
+          { body: { file_path: filePath, file_name: item.file.name } },
         );
         if (fnError) throw fnError;
 
-        const count = (fnData as any)?.count ?? 1;
-        return { index: i, count };
+        return { index: i, count: (fnData as any)?.count ?? 1 };
       })
     );
 
@@ -114,8 +138,9 @@ export function useInvoiceUpload() {
       return next;
     });
 
-    const totalExtracted = results.reduce((sum, r) =>
-      r.status === "fulfilled" ? sum + r.value.count : sum, 0
+    const totalExtracted = results.reduce(
+      (sum, r) => (r.status === "fulfilled" ? sum + r.value.count : sum),
+      0,
     );
 
     setIsUploading(false);
@@ -125,15 +150,8 @@ export function useInvoiceUpload() {
     return totalExtracted;
   };
 
+  /** Clear the queue */
   const reset = () => setQueue([]);
 
-  return {
-    queue,
-    isUploading,
-    fileInputRef,
-    addFiles,
-    removeFromQueue,
-    runUpload,
-    reset,
-  };
+  return { queue, isUploading, fileInputRef, addFiles, removeFromQueue, runUpload, reset };
 }
