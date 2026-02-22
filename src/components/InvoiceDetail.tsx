@@ -53,18 +53,17 @@ function FilePreview({ fileUrl, fileName }: { fileUrl: string; fileName: string 
   const isImage = /\.(png|jpe?g|webp|gif)$/i.test(fileName);
 
   const handleOpen = async () => {
+    // Open window synchronously to avoid popup blocker
+    const newWindow = window.open("", "_blank");
+    if (!newWindow) return;
+    newWindow.document.write("<html><body style='margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666'>Φόρτωση αρχείου…</body></html>");
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const resp = await supabase.functions.invoke("proxy-file", {
-        body: { file_path: extractStoragePath(fileUrl) },
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-      });
-      if (resp.error) throw resp.error;
-      const blob = new Blob([resp.data], { type: resp.data.type || "application/pdf" });
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank");
+      newWindow.location.href = blobUrl;
     } catch {
-      window.open(fileUrl, "_blank", "noopener,noreferrer");
+      newWindow.location.href = fileUrl;
     }
   };
 
