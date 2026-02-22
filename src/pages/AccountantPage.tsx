@@ -1,19 +1,26 @@
+/**
+ * AccountantPage — Shows invoices pending accountant review.
+ * Accountants can approve (archive) or reject (return to draft) invoices.
+ * Selecting an invoice opens InvoiceDetail in accountant mode (read-only fields).
+ */
+
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, FileText, Clock, Eye } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
 import { useAccountantMutation } from "@/hooks/useInvoices";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Invoice } from "@/types/invoice";
 
+/** Cache keys to invalidate after approve/reject */
 const INVALIDATE_KEYS = [["accountant-invoices"], ["invoices"]];
 
 export default function AccountantPage() {
   const queryClient = useQueryClient();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
+  /** Fetch only invoices awaiting accountant review */
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["accountant-invoices"],
     queryFn: async (): Promise<Invoice[]> => {
@@ -29,6 +36,8 @@ export default function AccountantPage() {
 
   const approveMutation = useAccountantMutation(INVALIDATE_KEYS);
 
+  // ── Detail view ───────────────────────────────────────────────────────────
+
   if (selectedInvoice) {
     return (
       <InvoiceDetail
@@ -41,6 +50,8 @@ export default function AccountantPage() {
       />
     );
   }
+
+  // ── List view ─────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
