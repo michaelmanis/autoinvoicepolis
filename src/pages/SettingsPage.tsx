@@ -17,6 +17,11 @@ import {
   Building2, UserPlus, X, ChevronRight, Ban, History, FileSpreadsheet,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import AuditLogTab from "@/components/admin/AuditLogTab";
 import DataExportTab from "@/components/admin/DataExportTab";
 
@@ -303,6 +308,7 @@ function UsersTab() {
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [bulkRole, setBulkRole] = useState<string>("");
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<string | null>(null);
 
   // Fetch all users with roles & memberships
   const { data, isLoading } = useQuery({
@@ -390,7 +396,6 @@ function UsersTab() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον χρήστη; Η ενέργεια είναι μη αναστρέψιμη.")) return;
     try {
       const { data, error } = await supabase.functions.invoke("manage-user", {
         body: { action: "delete", user_id: userId },
@@ -401,6 +406,8 @@ function UsersTab() {
       toast({ title: "Χρήστης διαγράφηκε." });
     } catch (err: any) {
       toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
+    } finally {
+      setConfirmDeleteUserId(null);
     }
   };
 
@@ -670,7 +677,7 @@ function UsersTab() {
                           size="sm"
                           variant="destructive"
                           className="text-xs"
-                          onClick={() => handleDeleteUser(u.id)}
+                          onClick={() => setConfirmDeleteUserId(u.id)}
                         >
                           <Trash2 className="mr-1 h-3 w-3" /> Διαγραφή
                         </Button>
@@ -683,6 +690,27 @@ function UsersTab() {
           })}
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!confirmDeleteUserId} onOpenChange={(open) => !open && setConfirmDeleteUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Διαγραφή Χρήστη</AlertDialogTitle>
+            <AlertDialogDescription>
+              Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον χρήστη; Η ενέργεια είναι μη αναστρέψιμη και θα αφαιρεθούν όλοι οι ρόλοι και οι συνδέσεις εταιρειών.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => confirmDeleteUserId && handleDeleteUser(confirmDeleteUserId)}
+            >
+              Διαγραφή
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -803,6 +831,7 @@ function ClientsTab() {
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [showAddCompany, setShowAddCompany] = useState(false);
   const [newCompany, setNewCompany] = useState({ name: "", vat_number: "", address: "", phone: "", email: "" });
+  const [confirmDeleteCompanyId, setConfirmDeleteCompanyId] = useState<string | null>(null);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberPassword, setNewMemberPassword] = useState("");
   const [newMemberPerms, setNewMemberPerms] = useState<string[]>(["view_invoices"]);
@@ -1005,7 +1034,7 @@ function ClientsTab() {
                 variant="ghost"
                 size="icon"
                 className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={(e) => { e.stopPropagation(); deleteCompany.mutate(c.id); }}
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteCompanyId(c.id); }}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -1105,6 +1134,27 @@ function ClientsTab() {
           )}
         </div>
       )}
+
+      {/* Delete company confirmation */}
+      <AlertDialog open={!!confirmDeleteCompanyId} onOpenChange={(open) => !open && setConfirmDeleteCompanyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Διαγραφή Εταιρείας</AlertDialogTitle>
+            <AlertDialogDescription>
+              Είστε σίγουροι ότι θέλετε να διαγράψετε αυτήν την εταιρεία; Θα αφαιρεθούν και όλα τα μέλη της.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (confirmDeleteCompanyId) { deleteCompany.mutate(confirmDeleteCompanyId); setConfirmDeleteCompanyId(null); } }}
+            >
+              Διαγραφή
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

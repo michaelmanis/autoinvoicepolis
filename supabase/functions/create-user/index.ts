@@ -52,17 +52,51 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, password, role, company_id, permissions } = await req.json();
+    const body = await req.json();
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body.password === "string" ? body.password : "";
+    const role = typeof body.role === "string" ? body.role : null;
+    const company_id = typeof body.company_id === "string" ? body.company_id : null;
+    const permissions = Array.isArray(body.permissions) ? body.permissions.filter((p: any) => typeof p === "string") : null;
 
-    if (!email || !password) {
-      return new Response(JSON.stringify({ error: "Email and password required" }), {
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email) || email.length > 255) {
+      return new Response(JSON.stringify({ error: "Invalid email address" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (password.length < 6) {
-      return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
+    if (!password || password.length < 6 || password.length > 128) {
+      return new Response(JSON.stringify({ error: "Password must be between 6 and 128 characters" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate role
+    const validRoles = ["admin", "accountant", "user"];
+    if (role && !validRoles.includes(role)) {
+      return new Response(JSON.stringify({ error: "Invalid role. Must be admin, accountant, or user" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate company_id format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (company_id && !uuidRegex.test(company_id)) {
+      return new Response(JSON.stringify({ error: "Invalid company_id format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate permissions
+    const validPermissions = ["view_invoices", "upload_edit", "approve_erp", "manage_projects"];
+    if (permissions && permissions.some((p: string) => !validPermissions.includes(p))) {
+      return new Response(JSON.stringify({ error: "Invalid permission value" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
