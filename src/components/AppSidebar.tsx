@@ -20,6 +20,7 @@ const EMPLOYEE_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard",        id: "dashboard" },
   { icon: FileText,        label: "Τιμολόγια",        id: "invoices" },
   { icon: FolderOpen,      label: "Projects",          id: "projects" },
+  { icon: ContactRound,    label: "Κάρτες",            id: "business-cards" },
 ];
 
 const ACCOUNTANT_ITEMS = [

@@ -23,6 +23,7 @@ const VIEW_MAP: Record<string, React.ComponentType> = {
   accountant: AccountantPage,
   "accountant-folder": AccountantFolderPage,
   settings: SettingsPage,
+  "business-cards": BusinessCardsPage,
 };
 
 const Index = () => {
