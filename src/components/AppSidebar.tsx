@@ -3,7 +3,7 @@ import polisLogo from "@/assets/polis-logo.png";
 import consultingIcon from "@/assets/consulting.png";
 import {
   LayoutDashboard, FileText, LogOut, FolderOpen,
-  UserCheck, FolderCheck, ChevronLeft, ChevronRight, Settings,
+  UserCheck, FolderCheck, ChevronLeft, ChevronRight, Settings, ContactRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
