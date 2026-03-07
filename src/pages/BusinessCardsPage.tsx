@@ -37,27 +37,32 @@ function UploadCardDialog() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (files: File[]) => {
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = `${user.id}/cards/${Date.now()}_${safeName}`;
+      let totalCards = 0;
 
-      const { error: upErr } = await supabase.storage
-        .from("invoices")
-        .upload(filePath, file);
-      if (upErr) throw upErr;
+      for (const file of files) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filePath = `${user.id}/cards/${Date.now()}_${safeName}`;
 
-      const { data, error } = await supabase.functions.invoke("extract-business-card", {
-        body: { file_path: filePath, file_name: file.name },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+        const { error: upErr } = await supabase.storage
+          .from("invoices")
+          .upload(filePath, file);
+        if (upErr) throw upErr;
 
-      toast({ title: "✅ Επαγγελματική κάρτα αναγνωρίστηκε!" });
+        const { data, error } = await supabase.functions.invoke("extract-business-card", {
+          body: { file_path: filePath, file_name: file.name },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        totalCards += data?.count || 1;
+      }
+
+      toast({ title: `✅ Αναγνωρίστηκαν ${totalCards} κάρτ${totalCards === 1 ? "α" : "ες"} από ${files.length} αρχεί${files.length === 1 ? "ο" : "α"}!` });
       queryClient.invalidateQueries({ queryKey: ["business-cards"] });
       setOpen(false);
     } catch (err: any) {
@@ -77,7 +82,7 @@ function UploadCardDialog() {
           <DialogTitle>Ανέβασμα Επαγγελματικής Κάρτας</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Ανεβάστε φωτογραφία μιας επαγγελματικής κάρτας. Το AI θα αναγνωρίσει αυτόματα τα στοιχεία.
+          Ανεβάστε φωτογραφίες επαγγελματικών καρτών. Κάθε εικόνα μπορεί να περιέχει πολλές κάρτες — το AI θα τις αναγνωρίσει και θα τις διαχωρίσει αυτόματα.
         </p>
         <div
           className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
@@ -86,15 +91,16 @@ function UploadCardDialog() {
           {uploading ? (
             <><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-sm text-muted-foreground">Αναγνώριση...</p></>
           ) : (
-            <><Upload className="h-10 w-10 text-muted-foreground/50" /><p className="text-sm text-muted-foreground">Κλικ ή σύρτε εικόνα εδώ</p><p className="text-xs text-muted-foreground/70">PNG, JPG, WebP — έως 20MB</p></>
+            <><Upload className="h-10 w-10 text-muted-foreground/50" /><p className="text-sm text-muted-foreground">Κλικ ή σύρτε εικόνες εδώ</p><p className="text-xs text-muted-foreground/70">PNG, JPG, WebP, PDF — έως 20MB · πολλαπλές κάρτες ανά αρχείο</p></>
           )}
         </div>
         <input
           ref={fileRef}
           type="file"
-          accept=".png,.jpg,.jpeg,.webp"
+          multiple
+          accept=".png,.jpg,.jpeg,.webp,.pdf"
           className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }}
+          onChange={(e) => { const f = Array.from(e.target.files ?? []); if (f.length) handleUpload(f); }}
           disabled={uploading}
         />
       </DialogContent>

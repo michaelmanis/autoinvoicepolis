@@ -34,7 +34,7 @@ serve(async (req) => {
       .download(file_path);
     if (dlError || !fileData) throw new Error("Failed to download file: " + dlError?.message);
 
-    // Convert to base64
+    // Convert to base64 (chunked to avoid stack overflow)
     const arrayBuffer = await fileData.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     let binary = "";
@@ -50,10 +50,11 @@ serve(async (req) => {
     };
     const mimeType = mimeMap[ext] || "image/jpeg";
 
-    // Use Lovable AI to extract business card info
     if (!lovableApiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `You are a business card data extractor. Analyze the image of a business card and extract the following fields:
+    const systemPrompt = `You are a business card data extractor. Analyze the image which may contain ONE or MULTIPLE business cards (e.g. a photo of many cards laid out on a table, a scanned page with multiple cards, or a single card).
+
+For EACH business card you can identify, extract:
 - company: The company/organization name
 - contact_surname: The person's surname/last name
 - contact_name: The person's first name
@@ -61,7 +62,8 @@ serve(async (req) => {
 - email: Email address
 - mobile_phone: Mobile/cell phone number (prefer mobile over landline)
 
-Return the data using the provided tool. If a field is not visible or cannot be determined, set it to null.`;
+Return ALL cards found using the provided tool. If a field is not visible or cannot be determined, set it to null.
+Be thorough — scan the entire image carefully for every distinct business card.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -76,7 +78,7 @@ Return the data using the provided tool. If a field is not visible or cannot be 
           {
             role: "user",
             content: [
-              { type: "text", text: "Extract the business card information from this image." },
+              { type: "text", text: "Extract ALL business cards from this image. There may be one or many cards visible." },
               { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
             ],
           },
@@ -85,24 +87,34 @@ Return the data using the provided tool. If a field is not visible or cannot be 
           {
             type: "function",
             function: {
-              name: "extract_business_card",
-              description: "Extract structured data from a business card image",
+              name: "extract_business_cards",
+              description: "Extract structured data from one or more business cards in the image",
               parameters: {
                 type: "object",
                 properties: {
-                  company: { type: "string", nullable: true },
-                  contact_surname: { type: "string", nullable: true },
-                  contact_name: { type: "string", nullable: true },
-                  title: { type: "string", nullable: true },
-                  email: { type: "string", nullable: true },
-                  mobile_phone: { type: "string", nullable: true },
+                  cards: {
+                    type: "array",
+                    description: "Array of business cards found in the image",
+                    items: {
+                      type: "object",
+                      properties: {
+                        company: { type: "string", nullable: true },
+                        contact_surname: { type: "string", nullable: true },
+                        contact_name: { type: "string", nullable: true },
+                        title: { type: "string", nullable: true },
+                        email: { type: "string", nullable: true },
+                        mobile_phone: { type: "string", nullable: true },
+                      },
+                      required: ["company", "contact_surname", "contact_name", "title", "email", "mobile_phone"],
+                    },
+                  },
                 },
-                required: ["company", "contact_surname", "contact_name", "title", "email", "mobile_phone"],
+                required: ["cards"],
               },
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "extract_business_card" } },
+        tool_choice: { type: "function", function: { name: "extract_business_cards" } },
       }),
     });
 
@@ -126,32 +138,40 @@ Return the data using the provided tool. If a field is not visible or cannot be 
     if (!toolCall) throw new Error("No tool call in AI response");
 
     const extracted = JSON.parse(toolCall.function.arguments);
+    const cardsList = extracted.cards || [extracted]; // fallback if single object
+
+    if (cardsList.length === 0) {
+      return new Response(JSON.stringify({ success: true, cards: [], count: 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Create signed URL for file
     const { data: signedData } = await supabaseAdmin.storage
       .from("invoices")
       .createSignedUrl(file_path, 60 * 60 * 24 * 365);
 
-    // Save to database
+    // Insert all cards
+    const inserts = cardsList.map((card: any) => ({
+      user_id: user.id,
+      company: card.company || null,
+      contact_surname: card.contact_surname || null,
+      contact_name: card.contact_name || null,
+      title: card.title || null,
+      email: card.email || null,
+      mobile_phone: card.mobile_phone || null,
+      file_url: signedData?.signedUrl || null,
+      file_name: file_name || null,
+    }));
+
     const { data: saved, error: insertError } = await supabaseAdmin
       .from("business_cards")
-      .insert({
-        user_id: user.id,
-        company: extracted.company || null,
-        contact_surname: extracted.contact_surname || null,
-        contact_name: extracted.contact_name || null,
-        title: extracted.title || null,
-        email: extracted.email || null,
-        mobile_phone: extracted.mobile_phone || null,
-        file_url: signedData?.signedUrl || null,
-        file_name: file_name || null,
-      })
-      .select()
-      .single();
+      .insert(inserts)
+      .select();
 
     if (insertError) throw new Error("Failed to save: " + insertError.message);
 
-    return new Response(JSON.stringify({ success: true, card: saved }), {
+    return new Response(JSON.stringify({ success: true, cards: saved, count: saved?.length || 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
