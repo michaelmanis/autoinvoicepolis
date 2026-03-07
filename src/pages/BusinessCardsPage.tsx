@@ -82,7 +82,7 @@ function UploadCardDialog() {
           <DialogTitle>Ανέβασμα Επαγγελματικής Κάρτας</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Ανεβάστε φωτογραφία μιας επαγγελματικής κάρτας. Το AI θα αναγνωρίσει αυτόματα τα στοιχεία.
+          Ανεβάστε φωτογραφίες επαγγελματικών καρτών. Κάθε εικόνα μπορεί να περιέχει πολλές κάρτες — το AI θα τις αναγνωρίσει και θα τις διαχωρίσει αυτόματα.
         </p>
         <div
           className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
