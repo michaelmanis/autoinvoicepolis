@@ -91,7 +91,7 @@ function UploadCardDialog() {
           {uploading ? (
             <><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-sm text-muted-foreground">Αναγνώριση...</p></>
           ) : (
-            <><Upload className="h-10 w-10 text-muted-foreground/50" /><p className="text-sm text-muted-foreground">Κλικ ή σύρτε εικόνα εδώ</p><p className="text-xs text-muted-foreground/70">PNG, JPG, WebP — έως 20MB</p></>
+            <><Upload className="h-10 w-10 text-muted-foreground/50" /><p className="text-sm text-muted-foreground">Κλικ ή σύρτε εικόνες εδώ</p><p className="text-xs text-muted-foreground/70">PNG, JPG, WebP, PDF — έως 20MB · πολλαπλές κάρτες ανά αρχείο</p></>
           )}
         </div>
         <input
