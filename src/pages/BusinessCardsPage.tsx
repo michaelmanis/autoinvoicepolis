@@ -37,27 +37,32 @@ function UploadCardDialog() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (files: File[]) => {
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = `${user.id}/cards/${Date.now()}_${safeName}`;
+      let totalCards = 0;
 
-      const { error: upErr } = await supabase.storage
-        .from("invoices")
-        .upload(filePath, file);
-      if (upErr) throw upErr;
+      for (const file of files) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filePath = `${user.id}/cards/${Date.now()}_${safeName}`;
 
-      const { data, error } = await supabase.functions.invoke("extract-business-card", {
-        body: { file_path: filePath, file_name: file.name },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+        const { error: upErr } = await supabase.storage
+          .from("invoices")
+          .upload(filePath, file);
+        if (upErr) throw upErr;
 
-      toast({ title: "✅ Επαγγελματική κάρτα αναγνωρίστηκε!" });
+        const { data, error } = await supabase.functions.invoke("extract-business-card", {
+          body: { file_path: filePath, file_name: file.name },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        totalCards += data?.count || 1;
+      }
+
+      toast({ title: `✅ Αναγνωρίστηκαν ${totalCards} κάρτ${totalCards === 1 ? "α" : "ες"} από ${files.length} αρχεί${files.length === 1 ? "ο" : "α"}!` });
       queryClient.invalidateQueries({ queryKey: ["business-cards"] });
       setOpen(false);
     } catch (err: any) {
