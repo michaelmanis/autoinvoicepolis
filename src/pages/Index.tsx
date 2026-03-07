@@ -12,6 +12,7 @@ import ProjectsPage from "@/pages/ProjectsPage";
 import AccountantPage from "@/pages/AccountantPage";
 import AccountantFolderPage from "@/pages/AccountantFolderPage";
 import SettingsPage from "@/pages/SettingsPage";
+import BusinessCardsPage from "@/pages/BusinessCardsPage";
 import { useUserRole } from "@/hooks/useUserRole";
 
 /** Maps view IDs to their components */
@@ -22,6 +23,7 @@ const VIEW_MAP: Record<string, React.ComponentType> = {
   accountant: AccountantPage,
   "accountant-folder": AccountantFolderPage,
   settings: SettingsPage,
+  "business-cards": BusinessCardsPage,
 };
 
 const Index = () => {

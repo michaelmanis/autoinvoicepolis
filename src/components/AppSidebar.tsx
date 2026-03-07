@@ -3,7 +3,7 @@ import polisLogo from "@/assets/polis-logo.png";
 import consultingIcon from "@/assets/consulting.png";
 import {
   LayoutDashboard, FileText, LogOut, FolderOpen,
-  UserCheck, FolderCheck, ChevronLeft, ChevronRight, Settings,
+  UserCheck, FolderCheck, ChevronLeft, ChevronRight, Settings, ContactRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,7 @@ const EMPLOYEE_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard",        id: "dashboard" },
   { icon: FileText,        label: "Τιμολόγια",        id: "invoices" },
   { icon: FolderOpen,      label: "Projects",          id: "projects" },
+  { icon: ContactRound,    label: "Κάρτες",            id: "business-cards" },
 ];
 
 const ACCOUNTANT_ITEMS = [

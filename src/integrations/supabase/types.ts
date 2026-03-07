@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_cards: {
+        Row: {
+          company: string | null
+          contact_name: string | null
+          contact_surname: string | null
+          created_at: string
+          email: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          mobile_phone: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          contact_name?: string | null
+          contact_surname?: string | null
+          created_at?: string
+          email?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          mobile_phone?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          contact_name?: string | null
+          contact_surname?: string | null
+          created_at?: string
+          email?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          mobile_phone?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           address: string | null
