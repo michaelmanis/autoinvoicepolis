@@ -14,6 +14,7 @@ import AccountantFolderPage from "@/pages/AccountantFolderPage";
 import SettingsPage from "@/pages/SettingsPage";
 import BusinessCardsPage from "@/pages/BusinessCardsPage";
 import ExpensesPage from "@/pages/ExpensesPage";
+import { useUserRole } from "@/hooks/useUserRole";
 
 /** Maps view IDs to their components */
 const VIEW_MAP: Record<string, React.ComponentType> = {
