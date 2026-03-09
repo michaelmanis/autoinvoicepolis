@@ -1,6 +1,6 @@
 /**
  * ExpensesPage — List, upload, and manage expenses.
- * Similar to InvoicesPage but focused on total amounts, not line items.
+ * Mirrors InvoicesPage with locked status logic for ERP workflow.
  */
 
 import { useState } from "react";
@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useExpenses, useDeleteExpense } from "@/hooks/useExpenses";
 import { useExpenseUpload } from "@/hooks/useExpenseUpload";
-import { EXPENSE_STATUS_CONFIG, formatAmount } from "@/types/expense";
+import { EXPENSE_STATUS_CONFIG, LOCKED_EXPENSE_STATUSES, formatAmount } from "@/types/expense";
 import type { Expense } from "@/types/expense";
 import ExpenseDetail from "@/components/ExpenseDetail";
 import * as XLSX from "xlsx";
@@ -107,6 +107,7 @@ function ExpenseRow({ exp, onView, onDelete }: {
 }) {
   const cfg = EXPENSE_STATUS_CONFIG[exp.status] || EXPENSE_STATUS_CONFIG.draft;
   const StatusIcon = cfg.icon;
+  const isLocked = LOCKED_EXPENSE_STATUSES.has(exp.status);
 
   return (
     <TableRow>
@@ -124,9 +125,11 @@ function ExpenseRow({ exp, onView, onDelete }: {
       </TableCell>
       <TableCell>
         <div className="flex gap-1">
-          <Button size="icon" variant="ghost" onClick={() => onView(exp)}>
-            <Eye className="h-4 w-4" />
-          </Button>
+          {!isLocked && (
+            <Button size="icon" variant="ghost" onClick={() => onView(exp)}>
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
           <Button size="icon" variant="ghost" onClick={() => onDelete(exp.id)} className="text-destructive hover:text-destructive">
             <Trash2 className="h-4 w-4" />
           </Button>
