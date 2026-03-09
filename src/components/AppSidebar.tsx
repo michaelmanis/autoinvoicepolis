@@ -106,11 +106,15 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
   const { data: pendingCount = 0 } = useQuery({
     queryKey: ["accountant-pending-count"],
     queryFn: async () => {
-      const { count } = await supabase
+      const { count: invCount } = await supabase
         .from("invoices")
         .select("id", { count: "exact", head: true })
         .eq("status", "accountant_pending");
-      return count ?? 0;
+      const { count: expCount } = await supabase
+        .from("expenses")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "accountant_pending");
+      return (invCount ?? 0) + (expCount ?? 0);
     },
     refetchInterval: 30_000,
     enabled: isAccountant || isAdmin,
