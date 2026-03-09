@@ -157,6 +157,44 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_actions: {
+        Row: {
+          action: string
+          created_at: string
+          expense_id: string
+          id: string
+          metadata: Json
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          expense_id: string
+          id?: string
+          metadata?: Json
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          expense_id?: string
+          id?: string
+          metadata?: Json
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_actions_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number | null
