@@ -157,6 +157,87 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number | null
+          company_id: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          due_date: string | null
+          expense_date: string | null
+          expense_number: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          notes: string | null
+          project_id: string | null
+          raw_ocr_text: string | null
+          status: string
+          supplier: string | null
+          supplier_vat: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          company_id?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          due_date?: string | null
+          expense_date?: string | null
+          expense_number?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string | null
+          raw_ocr_text?: string | null
+          status?: string
+          supplier?: string | null
+          supplier_vat?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          company_id?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          due_date?: string | null
+          expense_date?: string | null
+          expense_number?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string | null
+          raw_ocr_text?: string | null
+          status?: string
+          supplier?: string | null
+          supplier_vat?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_actions: {
         Row: {
           action: string
