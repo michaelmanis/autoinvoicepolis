@@ -13,12 +13,13 @@ import AccountantPage from "@/pages/AccountantPage";
 import AccountantFolderPage from "@/pages/AccountantFolderPage";
 import SettingsPage from "@/pages/SettingsPage";
 import BusinessCardsPage from "@/pages/BusinessCardsPage";
-import { useUserRole } from "@/hooks/useUserRole";
+import ExpensesPage from "@/pages/ExpensesPage";
 
 /** Maps view IDs to their components */
 const VIEW_MAP: Record<string, React.ComponentType> = {
   dashboard: PipelineView,
   invoices: InvoicesPage,
+  expenses: ExpensesPage,
   projects: ProjectsPage,
   accountant: AccountantPage,
   "accountant-folder": AccountantFolderPage,

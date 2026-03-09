@@ -19,6 +19,7 @@ import {
 const EMPLOYEE_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard",        id: "dashboard" },
   { icon: FileText,        label: "Τιμολόγια",        id: "invoices" },
+  { icon: Receipt,         label: "Δαπάνες",          id: "expenses" },
   { icon: FolderOpen,      label: "Projects",          id: "projects" },
   { icon: ContactRound,    label: "Κάρτες",            id: "business-cards" },
 ];
