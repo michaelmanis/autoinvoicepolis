@@ -13,8 +13,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type BusinessCard = {
   id: string;
   company: string | null;
@@ -42,18 +40,12 @@ function UploadCardDialog() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-
       let totalCards = 0;
-
       for (const file of files) {
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         const filePath = `${user.id}/cards/${Date.now()}_${safeName}`;
-
-        const { error: upErr } = await supabase.storage
-          .from("invoices")
-          .upload(filePath, file);
+        const { error: upErr } = await supabase.storage.from("invoices").upload(filePath, file);
         if (upErr) throw upErr;
-
         const { data, error } = await supabase.functions.invoke("extract-business-card", {
           body: { file_path: filePath, file_name: file.name },
         });
@@ -61,8 +53,7 @@ function UploadCardDialog() {
         if (data?.error) throw new Error(data.error);
         totalCards += data?.count || 1;
       }
-
-      toast({ title: `✅ Αναγνωρίστηκαν ${totalCards} κάρτ${totalCards === 1 ? "α" : "ες"} από ${files.length} αρχεί${files.length === 1 ? "ο" : "α"}!` });
+      toast({ title: `✅ Αναγνωρίστηκαν ${totalCards} κάρτ${totalCards === 1 ? "α" : "ες"}!` });
       queryClient.invalidateQueries({ queryKey: ["business-cards"] });
       setOpen(false);
     } catch (err: any) {
@@ -75,30 +66,30 @@ function UploadCardDialog() {
   return (
     <Dialog open={open} onOpenChange={(v) => !uploading && setOpen(v)}>
       <DialogTrigger asChild>
-        <Button><Plus className="mr-2 h-4 w-4" />Νέα Κάρτα</Button>
+        <Button size="sm"><Plus className="mr-1.5 h-4 w-4" /><span className="hidden sm:inline">Νέα Κάρτα</span><span className="sm:hidden">Νέα</span></Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md mx-4">
         <DialogHeader>
-          <DialogTitle>Ανέβασμα Επαγγελματικής Κάρτας</DialogTitle>
+          <DialogTitle>Ανέβασμα Κάρτας</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Ανεβάστε φωτογραφίες επαγγελματικών καρτών. Κάθε εικόνα μπορεί να περιέχει πολλές κάρτες — το AI θα τις αναγνωρίσει και θα τις διαχωρίσει αυτόματα.
+          Ανεβάστε φωτογραφίες καρτών. Το AI θα αναγνωρίσει αυτόματα τα στοιχεία.
         </p>
         <div
-          className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
+          className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border py-8 md:py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
           onClick={() => fileRef.current?.click()}
         >
           {uploading ? (
             <><Loader2 className="h-10 w-10 animate-spin text-primary" /><p className="text-sm text-muted-foreground">Αναγνώριση...</p></>
           ) : (
-            <><Upload className="h-10 w-10 text-muted-foreground/50" /><p className="text-sm text-muted-foreground">Κλικ ή σύρτε εικόνες εδώ</p><p className="text-xs text-muted-foreground/70">PNG, JPG, WebP, PDF — έως 20MB · πολλαπλές κάρτες ανά αρχείο</p></>
+            <><Upload className="h-10 w-10 text-muted-foreground/50" /><p className="text-sm text-muted-foreground text-center px-4">Κλικ ή σύρτε εικόνες εδώ</p><p className="text-xs text-muted-foreground/70">PNG, JPG, WebP, PDF — έως 20MB</p></>
           )}
         </div>
         <input
           ref={fileRef}
           type="file"
           multiple
-         accept="image/*,.pdf"
+          accept="image/*,.pdf"
           className="hidden"
           onChange={(e) => { const f = Array.from(e.target.files ?? []); if (f.length) handleUpload(f); }}
           disabled={uploading}
@@ -108,7 +99,7 @@ function UploadCardDialog() {
   );
 }
 
-// ─── Editable Card Row ────────────────────────────────────────────────────────
+// ─── Card Row (responsive) ────────────────────────────────────────────────────
 
 function CardRow({ card, onDelete }: { card: BusinessCard; onDelete: (id: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -125,10 +116,7 @@ function CardRow({ card, onDelete }: { card: BusinessCard; onDelete: (id: string
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("business_cards" as any)
-        .update(form as any)
-        .eq("id", card.id);
+      const { error } = await supabase.from("business_cards" as any).update(form as any).eq("id", card.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -142,7 +130,7 @@ function CardRow({ card, onDelete }: { card: BusinessCard; onDelete: (id: string
   if (editing) {
     return (
       <div className="rounded-xl border border-primary/30 bg-card p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {([
             ["company", "Εταιρεία"],
             ["contact_surname", "Επώνυμο"],
@@ -172,34 +160,33 @@ function CardRow({ card, onDelete }: { card: BusinessCard; onDelete: (id: string
   }
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4 hover:bg-secondary/30 transition-colors">
-      <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <ContactRound className="h-5 w-5 text-primary" />
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-card px-4 py-3 hover:bg-secondary/30 transition-colors sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <ContactRound className="h-4 w-4 text-primary" />
         </div>
-        <div>
-          <p className="font-medium text-card-foreground">
+        <div className="min-w-0">
+          <p className="font-medium text-card-foreground text-sm truncate">
             {[card.contact_name, card.contact_surname].filter(Boolean).join(" ") || "Χωρίς όνομα"}
           </p>
-          <p className="text-sm text-muted-foreground">{card.title || "—"}</p>
-          <p className="text-xs text-muted-foreground">{card.company || "—"}</p>
+          <p className="text-xs text-muted-foreground truncate">{card.title || "—"} · {card.company || "—"}</p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
-        <div className="text-right text-sm">
-          <p className="text-card-foreground">{card.email || "—"}</p>
+      <div className="flex items-center justify-between gap-2 pl-12 sm:pl-0">
+        <div className="text-xs sm:text-sm text-right min-w-0">
+          <p className="text-card-foreground truncate">{card.email || "—"}</p>
           <p className="text-muted-foreground">{card.mobile_phone || "—"}</p>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5 shrink-0">
           {card.file_url && (
-            <Button variant="ghost" size="icon" onClick={() => window.open(card.file_url!, "_blank")}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(card.file_url!, "_blank")}>
               <Eye className="h-4 w-4" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => setEditing(true)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(true)}>
             <Edit2 className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => onDelete(card.id)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(card.id)}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
@@ -217,10 +204,7 @@ export default function BusinessCardsPage() {
   const { data: cards, isLoading } = useQuery({
     queryKey: ["business-cards"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("business_cards" as any)
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("business_cards" as any).select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data as unknown as BusinessCard[];
     },
@@ -252,20 +236,20 @@ export default function BusinessCardsPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "BusinessCards");
     XLSX.writeFile(wb, `business_cards_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: `✅ Εξαγωγή ${rows.length} επαφών ολοκληρώθηκε!` });
+    toast({ title: `✅ Εξαγωγή ${rows.length} επαφών!` });
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Επαγγελματικές Κάρτες</h2>
-          <p className="text-sm text-muted-foreground">Σαρώστε κάρτες και εξάγετε επαφές σε Excel</p>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-base md:text-lg font-semibold text-foreground">Επαγγελματικές Κάρτες</h2>
+          <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Σαρώστε κάρτες και εξάγετε επαφές σε Excel</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {(cards?.length ?? 0) > 0 && (
-            <Button variant="outline" onClick={exportToExcel}>
-              <Download className="mr-2 h-4 w-4" />Excel
+            <Button variant="outline" size="sm" onClick={exportToExcel}>
+              <Download className="mr-1.5 h-4 w-4" /><span className="hidden sm:inline">Excel</span>
             </Button>
           )}
           <UploadCardDialog />
@@ -277,13 +261,13 @@ export default function BusinessCardsPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : !cards?.length ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 md:py-16">
           <ContactRound className="mb-4 h-12 w-12 text-muted-foreground/50" />
-          <p className="text-muted-foreground">Δεν υπάρχουν επαγγελματικές κάρτες ακόμα</p>
-          <p className="text-sm text-muted-foreground/70">Ανεβάστε μια φωτογραφία κάρτας για να ξεκινήσετε</p>
+          <p className="text-muted-foreground">Δεν υπάρχουν κάρτες ακόμα</p>
+          <p className="text-sm text-muted-foreground/70">Ανεβάστε μια φωτογραφία κάρτας</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2 md:space-y-3">
           {cards.map((card) => (
             <CardRow key={card.id} card={card} onDelete={(id) => deleteMutation.mutate(id)} />
           ))}

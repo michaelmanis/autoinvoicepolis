@@ -1,6 +1,6 @@
 /**
- * ExpensesPage — List, upload, and manage expenses.
- * Mirrors InvoicesPage with locked status logic for ERP workflow.
+ * ExpensesPage — Responsive list, upload, and manage expenses.
+ * Uses card layout on mobile instead of table.
  */
 
 import { useState } from "react";
@@ -39,16 +39,16 @@ function UploadDialog() {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogTrigger asChild>
-        <Button><Upload className="mr-2 h-4 w-4" />Ανέβασμα Δαπάνης</Button>
+        <Button size="sm"><Upload className="mr-1.5 h-4 w-4" /><span className="hidden sm:inline">Ανέβασμα Δαπάνης</span><span className="sm:hidden">Νέα</span></Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg mx-4">
         <DialogHeader><DialogTitle>Ανέβασμα Δαπανών</DialogTitle></DialogHeader>
 
         <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className="cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/30 p-8 text-center transition hover:border-primary/50"
+          className="cursor-pointer rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 md:p-8 text-center transition hover:border-primary/50"
         >
           <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Σύρετε αρχεία ή πατήστε για επιλογή</p>
@@ -76,9 +76,7 @@ function UploadDialog() {
                 )}
                 {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                 {item.status === "done" && (
-                  <Badge variant="outline" className="bg-success/10 text-success text-xs">
-                    ✓ {item.count ?? 1}
-                  </Badge>
+                  <Badge variant="outline" className="bg-success/10 text-success text-xs">✓ {item.count ?? 1}</Badge>
                 )}
                 {item.status === "error" && (
                   <Badge variant="destructive" className="text-xs">{item.error}</Badge>
@@ -98,13 +96,46 @@ function UploadDialog() {
   );
 }
 
-// ─── Expense Row ──────────────────────────────────────────────────────────────
+// ─── Mobile Expense Card ──────────────────────────────────────────────────────
 
-function ExpenseRow({ exp, onView, onDelete }: {
-  exp: Expense;
-  onView: (e: Expense) => void;
-  onDelete: (id: string) => void;
-}) {
+function ExpenseCard({ exp, onView, onDelete }: { exp: Expense; onView: (e: Expense) => void; onDelete: (id: string) => void }) {
+  const cfg = EXPENSE_STATUS_CONFIG[exp.status] || EXPENSE_STATUS_CONFIG.draft;
+  const StatusIcon = cfg.icon;
+  const isLocked = LOCKED_EXPENSE_STATUSES.has(exp.status);
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-card-foreground text-sm truncate">{exp.supplier || "—"}</p>
+        <p className="text-xs text-muted-foreground truncate">{exp.description || exp.expense_number || "—"}</p>
+        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          {exp.amount != null && (
+            <span className="text-sm font-medium text-card-foreground">
+              {formatAmount(exp.amount, exp.currency || "EUR")}
+            </span>
+          )}
+          <Badge variant="outline" className={`${cfg.className} text-[10px]`}>
+            <StatusIcon className="mr-0.5 h-3 w-3" />{cfg.label}
+          </Badge>
+        </div>
+      </div>
+      <div className="flex gap-0.5 shrink-0">
+        {!isLocked && (
+          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onView(exp)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+        )}
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDelete(exp.id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Desktop Table Row ────────────────────────────────────────────────────────
+
+function ExpenseRow({ exp, onView, onDelete }: { exp: Expense; onView: (e: Expense) => void; onDelete: (id: string) => void }) {
   const cfg = EXPENSE_STATUS_CONFIG[exp.status] || EXPENSE_STATUS_CONFIG.draft;
   const StatusIcon = cfg.icon;
   const isLocked = LOCKED_EXPENSE_STATUSES.has(exp.status);
@@ -172,12 +203,12 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Δαπάνες</h2>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base md:text-2xl font-bold text-foreground">Δαπάνες</h2>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel} disabled={!expenses?.length}>
-            <Download className="mr-2 h-4 w-4" />Excel
+          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={!expenses?.length}>
+            <Download className="mr-1.5 h-4 w-4" /><span className="hidden sm:inline">Excel</span>
           </Button>
           <UploadDialog />
         </div>
@@ -188,37 +219,52 @@ export default function ExpensesPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : !expenses?.length ? (
-        <div className="rounded-lg border border-dashed border-muted-foreground/30 py-16 text-center">
+        <div className="rounded-lg border border-dashed border-muted-foreground/30 py-12 md:py-16 text-center">
           <FileText className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
           <p className="text-muted-foreground">Δεν υπάρχουν δαπάνες</p>
-          <p className="mt-1 text-sm text-muted-foreground/60">Ανεβάστε αποδείξεις ή παραστατικά για να ξεκινήσετε</p>
+          <p className="mt-1 text-sm text-muted-foreground/60">Ανεβάστε αποδείξεις για να ξεκινήσετε</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Προμηθευτής</TableHead>
-                <TableHead>Περιγραφή</TableHead>
-                <TableHead>Αρ. Παραστ.</TableHead>
-                <TableHead>Ημερομηνία</TableHead>
-                <TableHead className="text-right">Ποσό</TableHead>
-                <TableHead>Κατάσταση</TableHead>
-                <TableHead className="w-24">Ενέργειες</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {expenses.map((exp) => (
-                <ExpenseRow
-                  key={exp.id}
-                  exp={exp}
-                  onView={setSelectedExpense}
-                  onDelete={(id) => deleteMutation.mutate(id)}
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <>
+          {/* Mobile: card layout */}
+          <div className="space-y-2 md:hidden">
+            {expenses.map((exp) => (
+              <ExpenseCard
+                key={exp.id}
+                exp={exp}
+                onView={setSelectedExpense}
+                onDelete={(id) => deleteMutation.mutate(id)}
+              />
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block rounded-lg border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Προμηθευτής</TableHead>
+                  <TableHead>Περιγραφή</TableHead>
+                  <TableHead>Αρ. Παραστ.</TableHead>
+                  <TableHead>Ημερομηνία</TableHead>
+                  <TableHead className="text-right">Ποσό</TableHead>
+                  <TableHead>Κατάσταση</TableHead>
+                  <TableHead className="w-24">Ενέργειες</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {expenses.map((exp) => (
+                  <ExpenseRow
+                    key={exp.id}
+                    exp={exp}
+                    onView={setSelectedExpense}
+                    onDelete={(id) => deleteMutation.mutate(id)}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );
