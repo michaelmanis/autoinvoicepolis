@@ -99,7 +99,6 @@ function UploadCardDialog() {
           type="file"
           multiple
          accept="image/*,.pdf"
-         capture="environment"
           className="hidden"
           onChange={(e) => { const f = Array.from(e.target.files ?? []); if (f.length) handleUpload(f); }}
           disabled={uploading}
