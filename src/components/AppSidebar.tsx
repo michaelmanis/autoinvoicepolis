@@ -153,6 +153,11 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
         </div>
       )}
 
+      {/* Company filter for admins */}
+      {isAdmin && !collapsed && (
+        <CompanySelector />
+      )}
+
       {/* Nav */}
       <nav className="flex-1 space-y-0.5 px-2 py-4">
         {allItems.map((item) => (
