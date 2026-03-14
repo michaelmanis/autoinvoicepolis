@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompanyFilter } from "@/hooks/useCompanyFilter";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell,
@@ -48,10 +49,16 @@ function ChartTooltip({ active, payload }: any) {
 }
 
 export default function PipelineView() {
+  const { selectedCompanyId, isAdmin } = useCompanyFilter();
+
   const { data: invoices } = useQuery({
-    queryKey: ["invoices"],
+    queryKey: ["invoices", selectedCompanyId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("invoices").select("status, created_at");
+      let query = supabase.from("invoices").select("status, created_at");
+      if (isAdmin && selectedCompanyId) {
+        query = query.eq("company_id", selectedCompanyId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
