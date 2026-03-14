@@ -7,6 +7,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCompanyFilter } from "@/hooks/useCompanyFilter";
 import type { Invoice } from "@/types/invoice";
 
 /** Shared query key for the main invoices list */
@@ -14,15 +15,23 @@ const INVOICES_KEY = ["invoices"] as const;
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-/** Fetch all invoices ordered by most recent first */
+/** Fetch all invoices ordered by most recent first, optionally filtered by company */
 export function useInvoices() {
+  const { selectedCompanyId, isAdmin } = useCompanyFilter();
+
   return useQuery({
-    queryKey: INVOICES_KEY,
+    queryKey: [...INVOICES_KEY, selectedCompanyId],
     queryFn: async (): Promise<Invoice[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("invoices")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (isAdmin && selectedCompanyId) {
+        query = query.eq("company_id", selectedCompanyId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Invoice[];
     },

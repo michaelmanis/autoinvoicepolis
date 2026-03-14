@@ -6,18 +6,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useCompanyFilter } from "@/hooks/useCompanyFilter";
 import type { Expense } from "@/types/expense";
 
 const EXPENSES_KEY = ["expenses"] as const;
 
 export function useExpenses() {
+  const { selectedCompanyId, isAdmin } = useCompanyFilter();
+
   return useQuery({
-    queryKey: EXPENSES_KEY,
+    queryKey: [...EXPENSES_KEY, selectedCompanyId],
     queryFn: async (): Promise<Expense[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("expenses")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (isAdmin && selectedCompanyId) {
+        query = query.eq("company_id", selectedCompanyId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as Expense[];
     },
