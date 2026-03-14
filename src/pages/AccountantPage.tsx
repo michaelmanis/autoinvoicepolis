@@ -1,7 +1,5 @@
 /**
- * AccountantPage — Shows invoices pending accountant review.
- * Accountants can approve (archive) or reject (return to draft) invoices.
- * Selecting an invoice opens InvoiceDetail in accountant mode (read-only fields).
+ * AccountantPage — Responsive invoice review for accountants.
  */
 
 import { useState } from "react";
@@ -13,14 +11,12 @@ import { useAccountantMutation } from "@/hooks/useInvoices";
 import { supabase } from "@/integrations/supabase/client";
 import type { Invoice } from "@/types/invoice";
 
-/** Cache keys to invalidate after approve/reject */
 const INVALIDATE_KEYS = [["accountant-invoices"], ["invoices"]];
 
 export default function AccountantPage() {
   const queryClient = useQueryClient();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-  /** Fetch only invoices awaiting accountant review */
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["accountant-invoices"],
     queryFn: async (): Promise<Invoice[]> => {
@@ -36,8 +32,6 @@ export default function AccountantPage() {
 
   const approveMutation = useAccountantMutation(INVALIDATE_KEYS);
 
-  // ── Detail view ───────────────────────────────────────────────────────────
-
   if (selectedInvoice) {
     return (
       <InvoiceDetail
@@ -51,14 +45,12 @@ export default function AccountantPage() {
     );
   }
 
-  // ── List view ─────────────────────────────────────────────────────────────
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Επιβεβαίωση Λογιστή</h2>
-        <p className="text-sm text-muted-foreground">
-          Τιμολόγια που αναμένουν επιβεβαίωση από τον λογιστή
+        <h2 className="text-base md:text-lg font-semibold text-foreground">Επιβεβαίωση Λογιστή</h2>
+        <p className="text-xs md:text-sm text-muted-foreground">
+          Τιμολόγια που αναμένουν επιβεβαίωση
         </p>
       </div>
 
@@ -67,10 +59,9 @@ export default function AccountantPage() {
           <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       ) : !invoices?.length ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 gap-3">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 md:py-16 gap-3">
           <CheckCircle2 className="h-12 w-12 text-success/40" />
           <p className="text-muted-foreground">Δεν υπάρχουν εκκρεμή τιμολόγια</p>
-          <p className="text-sm text-muted-foreground/70">Όλα τα τιμολόγια έχουν ελεγχθεί</p>
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card shadow-card">
@@ -78,36 +69,40 @@ export default function AccountantPage() {
             {invoices.map((inv) => (
               <div
                 key={inv.id}
-                className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-secondary/50"
+                className="flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-secondary/50 md:flex-row md:items-center md:justify-between md:px-6 md:py-4"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                    <FileText className="h-5 w-5 text-warning" />
+                {/* Left */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-lg bg-warning/10">
+                    <FileText className="h-4 w-4 md:h-5 md:w-5 text-warning" />
                   </div>
-                  <div>
-                    <p className="font-medium text-card-foreground">
+                  <div className="min-w-0">
+                    <p className="font-medium text-card-foreground text-sm truncate">
                       {inv.invoice_number || inv.file_name || "Χωρίς αριθμό"}
                     </p>
-                    <p className="text-sm text-muted-foreground">{inv.supplier || "Άγνωστος προμηθευτής"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{inv.supplier || "Άγνωστος"}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  {inv.amount != null && (
-                    <span className="text-sm font-medium text-card-foreground">
-                      {inv.amount.toLocaleString("el-GR", { minimumFractionDigits: 2 })} {inv.currency || "€"}
+                {/* Right */}
+                <div className="flex items-center justify-between gap-2 pl-12 md:pl-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {inv.amount != null && (
+                      <span className="text-sm font-medium text-card-foreground whitespace-nowrap">
+                        {inv.amount.toLocaleString("el-GR", { minimumFractionDigits: 2 })} {inv.currency || "€"}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-0.5 text-[11px] font-medium text-warning">
+                      <Clock className="h-3 w-3" />
+                      Αναμονή
                     </span>
-                  )}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
-                    <Clock className="h-3.5 w-3.5" />
-                    Αναμονή Ελέγχου
-                  </span>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => setSelectedInvoice(inv)}>
+                  </div>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedInvoice(inv)}>
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button
-                      variant="ghost" size="icon"
+                      variant="ghost" size="icon" className="h-8 w-8"
                       onClick={() => approveMutation.mutate({ id: inv.id, approved: true })}
                       disabled={approveMutation.isPending}
                       title="Έγκριση"
@@ -115,7 +110,7 @@ export default function AccountantPage() {
                       <CheckCircle2 className="h-4 w-4 text-success" />
                     </Button>
                     <Button
-                      variant="ghost" size="icon"
+                      variant="ghost" size="icon" className="h-8 w-8"
                       onClick={() => approveMutation.mutate({ id: inv.id, approved: false })}
                       disabled={approveMutation.isPending}
                       title="Απόρριψη"

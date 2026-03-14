@@ -1,7 +1,5 @@
 /**
- * Index — Main layout page that renders the sidebar and switches between
- * different views based on the active navigation item. Acts as an SPA shell
- * with role-aware default view selection.
+ * Index — Main layout with responsive sidebar (hamburger on mobile).
  */
 
 import { useState } from "react";
@@ -15,8 +13,10 @@ import SettingsPage from "@/pages/SettingsPage";
 import BusinessCardsPage from "@/pages/BusinessCardsPage";
 import ExpensesPage from "@/pages/ExpensesPage";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Menu } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
-/** Maps view IDs to their components */
 const VIEW_MAP: Record<string, React.ComponentType> = {
   dashboard: PipelineView,
   invoices: InvoicesPage,
@@ -25,33 +25,57 @@ const VIEW_MAP: Record<string, React.ComponentType> = {
   accountant: AccountantPage,
   "accountant-folder": AccountantFolderPage,
   settings: SettingsPage,
-  "business-cards": BusinessCardsPage
+  "business-cards": BusinessCardsPage,
 };
 
 const Index = () => {
   const { isAccountant, isAdmin } = useUserRole();
   const isAccountantOnly = isAccountant && !isAdmin;
-
-  // Accountant-only users default to their folder view
   const [activeView, setActiveView] = useState(
     isAccountantOnly ? "accountant-folder" : "dashboard"
   );
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const ActiveComponent = VIEW_MAP[activeView] ?? PipelineView;
 
+  const handleNavigate = (view: string) => {
+    setActiveView(view);
+    setMobileOpen(false);
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar activeView={activeView} onNavigate={setActiveView} />
+      {/* Desktop sidebar */}
+      <div className="hidden md:block">
+        <AppSidebar activeView={activeView} onNavigate={setActiveView} />
+      </div>
+
+      {/* Mobile sidebar sheet */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-64 p-0">
+          <AppSidebar activeView={activeView} onNavigate={handleNavigate} />
+        </SheetContent>
+      </Sheet>
+
       <main className="flex-1 overflow-auto">
-        <header className="flex items-center border-b border-border bg-card px-8 py-4">
-          
+        {/* Mobile header with hamburger */}
+        <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:px-8 md:py-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <span className="text-sm font-semibold text-foreground md:hidden">DocuHandler</span>
         </header>
-        <div className="animate-slide-in p-8">
+        <div className="animate-slide-in p-4 md:p-8">
           <ActiveComponent />
         </div>
       </main>
-    </div>);
-
+    </div>
+  );
 };
 
 export default Index;

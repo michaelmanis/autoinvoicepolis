@@ -32,12 +32,13 @@ function UploadDialog() {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Νέο Τιμολόγιο
+        <Button size="sm" className="md:size-default">
+          <Plus className="mr-1.5 h-4 w-4 md:mr-2" />
+          <span className="hidden sm:inline">Νέο Τιμολόγιο</span>
+          <span className="sm:hidden">Νέο</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg mx-4">
         <DialogHeader>
           <DialogTitle>Ανέβασμα Τιμολογίων</DialogTitle>
         </DialogHeader>
@@ -45,9 +46,8 @@ function UploadDialog() {
           Επιλέξτε ένα ή πολλά αρχεία. Το AI θα αναγνωρίσει αυτόματα τα δεδομένα κάθε τιμολογίου.
         </p>
 
-        {/* Drop zone */}
         <div
-          className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed border-border py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
+          className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed border-border py-8 md:py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
@@ -55,8 +55,8 @@ function UploadDialog() {
           <Upload className="h-10 w-10 text-muted-foreground/50" />
           {queue.length === 0 ? (
             <>
-              <p className="text-sm text-muted-foreground">Σύρτε αρχεία εδώ ή κάντε κλικ για επιλογή</p>
-              <p className="text-xs text-muted-foreground/70">PDF, PNG, JPG, WebP — έως 20MB το αρχείο</p>
+              <p className="text-sm text-muted-foreground text-center px-4">Σύρτε αρχεία εδώ ή κάντε κλικ για επιλογή</p>
+              <p className="text-xs text-muted-foreground/70">PDF, PNG, JPG, WebP — έως 20MB</p>
             </>
           ) : (
             <p className="text-sm text-muted-foreground">+ Προσθήκη περισσότερων αρχείων</p>
@@ -73,7 +73,6 @@ function UploadDialog() {
           disabled={isUploading}
         />
 
-        {/* Queue list */}
         {queue.length > 0 && (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {queue.map((item, idx) => (
@@ -112,7 +111,7 @@ function UploadDialog() {
           {isUploading ? (
             <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία...</>
           ) : (
-            <><Upload className="mr-2 h-4 w-4" />Ανέβασμα{pendingCount > 0 ? ` (${pendingCount} αρχεία)` : ""}</>
+            <><Upload className="mr-2 h-4 w-4" />Ανέβασμα{pendingCount > 0 ? ` (${pendingCount})` : ""}</>
           )}
         </Button>
       </DialogContent>
@@ -120,13 +119,10 @@ function UploadDialog() {
   );
 }
 
-// ─── Invoice row ──────────────────────────────────────────────────────────────
+// ─── Invoice row (responsive) ─────────────────────────────────────────────────
 
 function InvoiceRow({
-  inv,
-  onView,
-  onDelete,
-  isDuplicate,
+  inv, onView, onDelete, isDuplicate,
 }: {
   inv: Invoice;
   onView: (inv: Invoice) => void;
@@ -138,48 +134,47 @@ function InvoiceRow({
   const isLocked = LOCKED_STATUSES.has(inv.status);
 
   return (
-    <div className={`flex items-center justify-between px-6 py-4 transition-colors hover:bg-secondary/50 ${isDuplicate ? "bg-destructive/5" : ""}`}>
-      <div className="flex items-center gap-4">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${isDuplicate ? "bg-destructive/10" : "bg-secondary"}`}>
-          {isDuplicate ? (
-            <Copy className="h-5 w-5 text-destructive" />
-          ) : (
-            <FileText className="h-5 w-5 text-primary" />
-          )}
+    <div className={`flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-secondary/50 md:flex-row md:items-center md:justify-between md:px-6 md:py-4 ${isDuplicate ? "bg-destructive/5" : ""}`}>
+      {/* Left: icon + info */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-lg ${isDuplicate ? "bg-destructive/10" : "bg-secondary"}`}>
+          {isDuplicate ? <Copy className="h-4 w-4 text-destructive" /> : <FileText className="h-4 w-4 text-primary" />}
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-card-foreground">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium text-card-foreground text-sm truncate">
               {inv.invoice_number || inv.file_name || "Χωρίς αριθμό"}
             </p>
             {isDuplicate && (
               <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive uppercase tracking-wide">
-                <Copy className="h-3 w-3" />
-                Διπλότυπο
+                <Copy className="h-3 w-3" />Διπλ.
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">{inv.supplier || "Άγνωστος προμηθευτής"}</p>
+          <p className="text-xs text-muted-foreground truncate">{inv.supplier || "Άγνωστος προμηθευτής"}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {inv.amount != null && (
-          <span className="text-sm font-medium text-card-foreground">
-            {inv.amount.toLocaleString("el-GR", { minimumFractionDigits: 2 })} {inv.currency || "€"}
+      {/* Right: amount + status + actions */}
+      <div className="flex items-center justify-between gap-2 md:gap-4 pl-12 md:pl-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          {inv.amount != null && (
+            <span className="text-sm font-medium text-card-foreground whitespace-nowrap">
+              {inv.amount.toLocaleString("el-GR", { minimumFractionDigits: 2 })} {inv.currency || "€"}
+            </span>
+          )}
+          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${status.className}`}>
+            <StatusIcon className="h-3 w-3" />
+            {status.label}
           </span>
-        )}
-        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${status.className}`}>
-          <StatusIcon className="h-3.5 w-3.5" />
-          {status.label}
-        </span>
-        <div className="flex gap-1">
+        </div>
+        <div className="flex gap-0.5 shrink-0">
           {!isLocked && (
-            <Button variant="ghost" size="icon" onClick={() => onView(inv)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onView(inv)}>
               <Eye className="h-4 w-4" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => onDelete(inv.id)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(inv.id)}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
@@ -208,10 +203,9 @@ export default function InvoicesPage() {
     );
   }
 
-  // Compute duplicate IDs: invoices sharing same supplier_vat + invoice_number
   const duplicateIds = new Set<string>();
   if (invoices) {
-    const seen = new Map<string, string>(); // key -> first invoice id
+    const seen = new Map<string, string>();
     for (const inv of invoices) {
       if (inv.supplier_vat && inv.invoice_number) {
         const key = `${inv.supplier_vat}__${inv.invoice_number}`;
@@ -225,7 +219,6 @@ export default function InvoicesPage() {
     }
   }
 
-  // Group by upload date
   const groups = (invoices ?? []).reduce<Record<string, Invoice[]>>((acc, inv) => {
     const key = new Date(inv.created_at).toLocaleDateString("el-GR", {
       weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -235,20 +228,20 @@ export default function InvoicesPage() {
   }, {});
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Τιμολόγια</h2>
-          <p className="text-sm text-muted-foreground">Ανεβάστε και διαχειριστείτε τα τιμολόγιά σας</p>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-base md:text-lg font-semibold text-foreground">Τιμολόγια</h2>
+          <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Ανεβάστε και διαχειριστείτε τα τιμολόγιά σας</p>
         </div>
         <UploadDialog />
       </div>
 
       {duplicateIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 md:px-4 md:py-3 text-xs md:text-sm text-destructive">
           <Copy className="h-4 w-4 shrink-0" />
           <span>
-            Εντοπίστηκαν <strong>{duplicateIds.size}</strong> πιθανά διπλότυπα τιμολόγια (ίδιο ΑΦΜ + αριθμός τιμολογίου).
+            <strong>{duplicateIds.size}</strong> πιθανά διπλότυπα
           </span>
         </div>
       )}
@@ -258,21 +251,21 @@ export default function InvoicesPage() {
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : !invoices?.length ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 md:py-16">
           <Upload className="mb-4 h-12 w-12 text-muted-foreground/50" />
           <p className="text-muted-foreground">Δεν υπάρχουν τιμολόγια ακόμα</p>
-          <p className="text-sm text-muted-foreground/70">Ανεβάστε ένα PDF ή εικόνα για να ξεκινήσετε</p>
+          <p className="text-sm text-muted-foreground/70">Ανεβάστε ένα PDF ή εικόνα</p>
         </div>
       ) : (
         <div className="space-y-4">
           {Object.entries(groups).map(([dateLabel, groupInvoices]) => (
             <div key={dateLabel}>
               <div className="flex items-center gap-3 mb-2 px-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {dateLabel}
                 </span>
-                <span className="text-xs text-muted-foreground/60 bg-muted rounded-full px-2 py-0.5">
-                  {groupInvoices.length} τιμολόγ{groupInvoices.length === 1 ? "ιο" : "ια"}
+                <span className="text-[10px] md:text-xs text-muted-foreground/60 bg-muted rounded-full px-2 py-0.5">
+                  {groupInvoices.length}
                 </span>
                 <div className="flex-1 h-px bg-border" />
               </div>
