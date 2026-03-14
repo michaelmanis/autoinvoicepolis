@@ -168,7 +168,10 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
         </div>
       ) : (
         <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
-          <span className="text-lg font-semibold text-sidebar-foreground">DocuHandler</span>
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Logo" className="h-8 w-8 brightness-0 invert" />
+            <span className="text-lg font-semibold text-sidebar-foreground">DocuHandler</span>
+          </div>
           <button
             onClick={() => setCollapsed(true)}
             className="hidden md:flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
