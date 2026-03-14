@@ -25,7 +25,7 @@ const VIEW_MAP: Record<string, React.ComponentType> = {
   accountant: AccountantPage,
   "accountant-folder": AccountantFolderPage,
   settings: SettingsPage,
-  "business-cards": BusinessCardsPage,
+  "business-cards": BusinessCardsPage
 };
 
 const Index = () => {
@@ -44,14 +44,14 @@ const Index = () => {
       <AppSidebar activeView={activeView} onNavigate={setActiveView} />
       <main className="flex-1 overflow-auto">
         <header className="flex items-center border-b border-border bg-card px-8 py-4">
-          <h1 className="text-xl font-semibold text-foreground">DocuHandler</h1>
+          
         </header>
         <div className="animate-slide-in p-8">
           <ActiveComponent />
         </div>
       </main>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Index;
