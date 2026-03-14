@@ -87,6 +87,30 @@ function NavItem({ icon: Icon, label, active, collapsed, badge, onClick }: NavIt
   return btn;
 }
 
+function CompanySelector() {
+  const { companies, selectedCompanyId, setSelectedCompanyId } = useCompanyFilter();
+
+  return (
+    <div className="px-3 py-2">
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Εταιρεία</p>
+      <Select
+        value={selectedCompanyId ?? "all"}
+        onValueChange={(v) => setSelectedCompanyId(v === "all" ? null : v)}
+      >
+        <SelectTrigger className="h-8 text-xs bg-sidebar-accent/50 border-sidebar-border">
+          <SelectValue placeholder="Όλες" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Όλες οι εταιρείες</SelectItem>
+          {companies.map((c) => (
+            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 interface AppSidebarProps {
   activeView: string;
   onNavigate: (view: string) => void;
