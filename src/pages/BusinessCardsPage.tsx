@@ -98,7 +98,7 @@ function UploadCardDialog() {
           ref={fileRef}
           type="file"
           multiple
-          accept=".png,.jpg,.jpeg,.webp,.pdf"
+         accept="image/*,.pdf"
           className="hidden"
           onChange={(e) => { const f = Array.from(e.target.files ?? []); if (f.length) handleUpload(f); }}
           disabled={uploading}
