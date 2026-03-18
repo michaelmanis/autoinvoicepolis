@@ -2,7 +2,7 @@
  * Index — Main layout with responsive sidebar (hamburger on mobile).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import PipelineView from "@/components/PipelineView";
 import InvoicesPage from "@/pages/InvoicesPage";
@@ -12,8 +12,9 @@ import AccountantFolderPage from "@/pages/AccountantFolderPage";
 import SettingsPage from "@/pages/SettingsPage";
 import BusinessCardsPage from "@/pages/BusinessCardsPage";
 import ExpensesPage from "@/pages/ExpensesPage";
+import GlobalSearch from "@/components/GlobalSearch";
 import { useUserRole } from "@/hooks/useUserRole";
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
