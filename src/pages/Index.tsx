@@ -83,7 +83,23 @@ const Index = () => {
             <Menu className="h-5 w-5" />
           </Button>
           <span className="text-sm font-semibold text-foreground md:hidden">DocuHandler</span>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Αναζήτηση</span>
+              <kbd className="pointer-events-none hidden h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
+                ⌘K
+              </kbd>
+            </Button>
+          </div>
         </header>
+
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
         <div className="animate-slide-in p-4 md:p-8">
           <ActiveComponent />
         </div>
