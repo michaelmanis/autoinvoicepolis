@@ -2,7 +2,7 @@
  * Index — Main layout with responsive sidebar (hamburger on mobile).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import PipelineView from "@/components/PipelineView";
 import InvoicesPage from "@/pages/InvoicesPage";
@@ -12,8 +12,9 @@ import AccountantFolderPage from "@/pages/AccountantFolderPage";
 import SettingsPage from "@/pages/SettingsPage";
 import BusinessCardsPage from "@/pages/BusinessCardsPage";
 import ExpensesPage from "@/pages/ExpensesPage";
+import GlobalSearch from "@/components/GlobalSearch";
 import { useUserRole } from "@/hooks/useUserRole";
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -35,6 +36,19 @@ const Index = () => {
     isAccountantOnly ? "accountant-folder" : "dashboard"
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // ⌘K / Ctrl+K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const ActiveComponent = VIEW_MAP[activeView] ?? PipelineView;
 
@@ -69,7 +83,23 @@ const Index = () => {
             <Menu className="h-5 w-5" />
           </Button>
           <span className="text-sm font-semibold text-foreground md:hidden">DocuHandler</span>
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Αναζήτηση</span>
+              <kbd className="pointer-events-none hidden h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
+                ⌘K
+              </kbd>
+            </Button>
+          </div>
         </header>
+
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
         <div className="animate-slide-in p-4 md:p-8">
           <ActiveComponent />
         </div>
