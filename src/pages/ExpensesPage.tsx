@@ -30,6 +30,7 @@ import { EXPENSE_DOCUMENT_TYPES } from "@/types/expenseDocumentTypes";
 function UploadDialog() {
   const { queue, isUploading, fileInputRef, addFiles, removeFromQueue, runUpload, reset } = useExpenseUpload();
   const [open, setOpen] = useState(false);
+  const [documentType, setDocumentType] = useState<string>("");
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -37,7 +38,7 @@ function UploadDialog() {
   };
 
   const handleClose = (v: boolean) => {
-    if (!isUploading) { setOpen(v); if (!v) reset(); }
+    if (!isUploading) { setOpen(v); if (!v) { reset(); setDocumentType(""); } }
   };
 
   return (
