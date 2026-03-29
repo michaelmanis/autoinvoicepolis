@@ -10,6 +10,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +23,14 @@ import type { Expense } from "@/types/expense";
 import ExpenseDetail from "@/components/ExpenseDetail";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
+import { EXPENSE_DOCUMENT_TYPES } from "@/types/expenseDocumentTypes";
 
 // ─── Upload Dialog ────────────────────────────────────────────────────────────
 
 function UploadDialog() {
   const { queue, isUploading, fileInputRef, addFiles, removeFromQueue, runUpload, reset } = useExpenseUpload();
   const [open, setOpen] = useState(false);
+  const [documentType, setDocumentType] = useState<string>("");
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -33,7 +38,7 @@ function UploadDialog() {
   };
 
   const handleClose = (v: boolean) => {
-    if (!isUploading) { setOpen(v); if (!v) reset(); }
+    if (!isUploading) { setOpen(v); if (!v) { reset(); setDocumentType(""); } }
   };
 
   return (
@@ -43,6 +48,23 @@ function UploadDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg mx-4">
         <DialogHeader><DialogTitle>Ανέβασμα Δαπανών</DialogTitle></DialogHeader>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Τύπος Παραστατικού</label>
+          <Select value={documentType} onValueChange={setDocumentType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Επιλέξτε τύπο παραστατικού..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {EXPENSE_DOCUMENT_TYPES.map((dt) => (
+                <SelectItem key={dt.code} value={dt.code}>
+                  <span className="font-medium">{dt.code}</span>
+                  <span className="text-muted-foreground ml-2">— {dt.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div
           onDragOver={(e) => e.preventDefault()}
@@ -87,7 +109,7 @@ function UploadDialog() {
         )}
 
         <DialogFooter>
-          <Button onClick={runUpload} disabled={isUploading || !queue.some((q) => q.status === "pending")}>
+          <Button onClick={() => runUpload(documentType || undefined)} disabled={isUploading || !queue.some((q) => q.status === "pending") || !documentType}>
             {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία…</> : "Έναρξη"}
           </Button>
         </DialogFooter>

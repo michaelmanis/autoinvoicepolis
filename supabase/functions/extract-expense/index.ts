@@ -37,7 +37,7 @@ serve(async (req) => {
       });
     }
 
-    const { file_path, file_name } = await req.json();
+    const { file_path, file_name, document_type } = await req.json();
     if (!file_path) {
       return new Response(JSON.stringify({ error: "file_path is required" }), {
         status: 400,
@@ -220,6 +220,7 @@ If a field is not visible, set it to null.`;
       status: "draft",
       file_url: signedUrlData?.signedUrl || null,
       file_name: file_name || null,
+      document_type: document_type || null,
     }));
 
     const { data: expenses, error: insertError } = await supabaseAdmin

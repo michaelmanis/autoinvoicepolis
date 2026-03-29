@@ -53,7 +53,7 @@ export function useExpenseUpload() {
     setQueue((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const runUpload = async () => {
+  const runUpload = async (documentType?: string) => {
     const pendingIndices = queue
       .map((q, i) => (q.status === "pending" ? i : -1))
       .filter((i) => i !== -1);
@@ -86,7 +86,7 @@ export function useExpenseUpload() {
 
         const { data: fnData, error: fnError } = await supabase.functions.invoke(
           "extract-expense",
-          { body: { file_path: filePath, file_name: item.file.name } },
+          { body: { file_path: filePath, file_name: item.file.name, document_type: documentType } },
         );
         if (fnError) throw fnError;
         return { index: i, count: (fnData as any)?.count ?? 1 };
