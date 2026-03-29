@@ -5,17 +5,22 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Upload, FileText, CheckCircle2, Loader2, Eye, Trash2, Plus, X, Copy,
 } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
 import { useInvoices, useDeleteInvoice } from "@/hooks/useInvoices";
 import { useInvoiceUpload } from "@/hooks/useInvoiceUpload";
 import { STATUS_CONFIG, LOCKED_STATUSES, type Invoice } from "@/types/invoice";
+import { DOCUMENT_TYPES } from "@/types/documentTypes";
 
 // ─── Upload Dialog ────────────────────────────────────────────────────────────
 
 function UploadDialog() {
   const [open, setOpen] = useState(false);
+  const [documentType, setDocumentType] = useState<string>("");
   const { queue, isUploading, fileInputRef, addFiles, removeFromQueue, runUpload, reset } = useInvoiceUpload();
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -24,7 +29,7 @@ function UploadDialog() {
   };
 
   const handleClose = (v: boolean) => {
-    if (!isUploading) { setOpen(v); if (!v) reset(); }
+    if (!isUploading) { setOpen(v); if (!v) { reset(); setDocumentType(""); } }
   };
 
   const pendingCount = queue.filter((q) => q.status === "pending").length;
@@ -45,6 +50,23 @@ function UploadDialog() {
         <p className="text-sm text-muted-foreground">
           Επιλέξτε ένα ή πολλά αρχεία. Το AI θα αναγνωρίσει αυτόματα τα δεδομένα κάθε τιμολογίου.
         </p>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Τύπος Παραστατικού</label>
+          <Select value={documentType} onValueChange={setDocumentType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Επιλέξτε τύπο παραστατικού..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {DOCUMENT_TYPES.map((dt) => (
+                <SelectItem key={dt.code} value={dt.code}>
+                  <span className="font-medium">{dt.code}</span>
+                  <span className="text-muted-foreground ml-2">— {dt.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div
           className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed border-border py-8 md:py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
@@ -103,10 +125,10 @@ function UploadDialog() {
         <Button
           className="w-full"
           onClick={async () => {
-            await runUpload();
-            setTimeout(() => { setOpen(false); reset(); }, 1500);
+            await runUpload(documentType || undefined);
+            setTimeout(() => { setOpen(false); reset(); setDocumentType(""); }, 1500);
           }}
-          disabled={pendingCount === 0 || isUploading}
+          disabled={pendingCount === 0 || isUploading || !documentType}
         >
           {isUploading ? (
             <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία...</>
