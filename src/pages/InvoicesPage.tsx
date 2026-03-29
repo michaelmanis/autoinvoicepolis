@@ -125,10 +125,10 @@ function UploadDialog() {
         <Button
           className="w-full"
           onClick={async () => {
-            await runUpload();
-            setTimeout(() => { setOpen(false); reset(); }, 1500);
+            await runUpload(documentType || undefined);
+            setTimeout(() => { setOpen(false); reset(); setDocumentType(""); }, 1500);
           }}
-          disabled={pendingCount === 0 || isUploading}
+          disabled={pendingCount === 0 || isUploading || !documentType}
         >
           {isUploading ? (
             <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία...</>
