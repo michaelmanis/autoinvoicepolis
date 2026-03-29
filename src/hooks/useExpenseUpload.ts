@@ -53,7 +53,7 @@ export function useExpenseUpload() {
     setQueue((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const runUpload = async () => {
+  const runUpload = async (documentType?: string) => {
     const pendingIndices = queue
       .map((q, i) => (q.status === "pending" ? i : -1))
       .filter((i) => i !== -1);
