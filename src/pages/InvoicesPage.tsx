@@ -51,6 +51,23 @@ function UploadDialog() {
           Επιλέξτε ένα ή πολλά αρχεία. Το AI θα αναγνωρίσει αυτόματα τα δεδομένα κάθε τιμολογίου.
         </p>
 
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Τύπος Παραστατικού</label>
+          <Select value={documentType} onValueChange={setDocumentType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Επιλέξτε τύπο παραστατικού..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {DOCUMENT_TYPES.map((dt) => (
+                <SelectItem key={dt.code} value={dt.code}>
+                  <span className="font-medium">{dt.code}</span>
+                  <span className="text-muted-foreground ml-2">— {dt.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div
           className="flex flex-col items-center justify-center w-full rounded-xl border-2 border-dashed border-border py-8 md:py-10 gap-3 hover:bg-secondary/30 transition-colors cursor-pointer"
           onClick={() => fileInputRef.current?.click()}
