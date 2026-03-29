@@ -49,6 +49,23 @@ function UploadDialog() {
       <DialogContent className="sm:max-w-lg mx-4">
         <DialogHeader><DialogTitle>Ανέβασμα Δαπανών</DialogTitle></DialogHeader>
 
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">Τύπος Παραστατικού</label>
+          <Select value={documentType} onValueChange={setDocumentType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Επιλέξτε τύπο παραστατικού..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {EXPENSE_DOCUMENT_TYPES.map((dt) => (
+                <SelectItem key={dt.code} value={dt.code}>
+                  <span className="font-medium">{dt.code}</span>
+                  <span className="text-muted-foreground ml-2">— {dt.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
