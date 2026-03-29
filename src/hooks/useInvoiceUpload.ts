@@ -116,7 +116,7 @@ export function useInvoiceUpload() {
 
         const { data: fnData, error: fnError } = await supabase.functions.invoke(
           "extract-invoice",
-          { body: { file_path: filePath, file_name: item.file.name } },
+          { body: { file_path: filePath, file_name: item.file.name, document_type: documentType } },
         );
         if (fnError) throw fnError;
 

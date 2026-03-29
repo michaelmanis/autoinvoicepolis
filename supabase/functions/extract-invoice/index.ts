@@ -262,6 +262,7 @@ If a field is not visible for a given invoice, set it to null.`;
       file_url: signedUrlData?.signedUrl || null,
       file_name: file_name || null,
       project_id: project_id || null,
+      document_type: document_type || null,
     }));
 
     const { data: invoices, error: insertError } = await supabaseAdmin
