@@ -20,6 +20,7 @@ import { DOCUMENT_TYPES } from "@/types/documentTypes";
 
 function UploadDialog() {
   const [open, setOpen] = useState(false);
+  const [documentType, setDocumentType] = useState<string>("");
   const { queue, isUploading, fileInputRef, addFiles, removeFromQueue, runUpload, reset } = useInvoiceUpload();
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
