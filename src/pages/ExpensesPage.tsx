@@ -109,7 +109,7 @@ function UploadDialog() {
         )}
 
         <DialogFooter>
-          <Button onClick={runUpload} disabled={isUploading || !queue.some((q) => q.status === "pending")}>
+          <Button onClick={() => runUpload(documentType || undefined)} disabled={isUploading || !queue.some((q) => q.status === "pending") || !documentType}>
             {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Επεξεργασία…</> : "Έναρξη"}
           </Button>
         </DialogFooter>
