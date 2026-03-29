@@ -29,7 +29,7 @@ function UploadDialog() {
   };
 
   const handleClose = (v: boolean) => {
-    if (!isUploading) { setOpen(v); if (!v) reset(); }
+    if (!isUploading) { setOpen(v); if (!v) { reset(); setDocumentType(""); } }
   };
 
   const pendingCount = queue.filter((q) => q.status === "pending").length;
