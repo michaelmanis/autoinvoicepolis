@@ -202,6 +202,7 @@ export type Database = {
           created_at: string
           currency: string | null
           description: string | null
+          document_type: string | null
           due_date: string | null
           expense_date: string | null
           expense_number: string | null
@@ -223,6 +224,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           description?: string | null
+          document_type?: string | null
           due_date?: string | null
           expense_date?: string | null
           expense_number?: string | null
@@ -244,6 +246,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           description?: string | null
+          document_type?: string | null
           due_date?: string | null
           expense_date?: string | null
           expense_number?: string | null

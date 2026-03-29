@@ -220,6 +220,7 @@ If a field is not visible, set it to null.`;
       status: "draft",
       file_url: signedUrlData?.signedUrl || null,
       file_name: file_name || null,
+      document_type: document_type || null,
     }));
 
     const { data: expenses, error: insertError } = await supabaseAdmin

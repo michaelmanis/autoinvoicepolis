@@ -86,7 +86,7 @@ export function useExpenseUpload() {
 
         const { data: fnData, error: fnError } = await supabase.functions.invoke(
           "extract-expense",
-          { body: { file_path: filePath, file_name: item.file.name } },
+          { body: { file_path: filePath, file_name: item.file.name, document_type: documentType } },
         );
         if (fnError) throw fnError;
         return { index: i, count: (fnData as any)?.count ?? 1 };

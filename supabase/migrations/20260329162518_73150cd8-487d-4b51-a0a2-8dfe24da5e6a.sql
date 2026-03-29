@@ -1,0 +1,1 @@
+ALTER TABLE public.expenses ADD COLUMN document_type text DEFAULT null;
