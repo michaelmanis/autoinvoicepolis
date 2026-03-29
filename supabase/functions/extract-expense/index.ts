@@ -37,7 +37,7 @@ serve(async (req) => {
       });
     }
 
-    const { file_path, file_name } = await req.json();
+    const { file_path, file_name, document_type } = await req.json();
     if (!file_path) {
       return new Response(JSON.stringify({ error: "file_path is required" }), {
         status: 400,
