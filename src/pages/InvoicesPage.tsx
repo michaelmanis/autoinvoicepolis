@@ -5,12 +5,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Upload, FileText, CheckCircle2, Loader2, Eye, Trash2, Plus, X, Copy,
 } from "lucide-react";
 import InvoiceDetail from "@/components/InvoiceDetail";
 import { useInvoices, useDeleteInvoice } from "@/hooks/useInvoices";
 import { useInvoiceUpload } from "@/hooks/useInvoiceUpload";
 import { STATUS_CONFIG, LOCKED_STATUSES, type Invoice } from "@/types/invoice";
+import { DOCUMENT_TYPES } from "@/types/documentTypes";
 
 // ─── Upload Dialog ────────────────────────────────────────────────────────────
 
