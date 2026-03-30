@@ -52,7 +52,12 @@ function UploadDialog() {
         </p>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">Τύπος Παραστατικού</label>
+          <label className="text-sm font-medium text-foreground">
+            Στοιχεία Τιμολογίου <span className="text-destructive">*</span>
+          </label>
+          {!documentType && queue.length > 0 && (
+            <p className="text-xs text-destructive">Υποχρεωτικό πεδίο — επιλέξτε τύπο παραστατικού</p>
+          )}
           <Select value={documentType} onValueChange={setDocumentType}>
             <SelectTrigger>
               <SelectValue placeholder="Επιλέξτε τύπο παραστατικού..." />
