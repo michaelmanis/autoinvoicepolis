@@ -453,7 +453,17 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
               </div>
               <div className="space-y-2">
                 <Label>Ποσό <span className="text-destructive">*</span></Label>
-                <Input type="number" step="0.01" value={form.amount} onChange={(e) => patchForm({ amount: e.target.value })} readOnly={isAccountant} />
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={(e) => patchForm({ amount: e.target.value })}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) patchForm({ amount: val.toFixed(2) });
+                  }}
+                  readOnly={isAccountant}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Ημερομηνία <span className="text-destructive">*</span></Label>

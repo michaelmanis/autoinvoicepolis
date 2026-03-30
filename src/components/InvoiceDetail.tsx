@@ -185,6 +185,10 @@ function InvoiceFormFields({
         step={type === "number" ? "0.01" : undefined}
         value={form[key]}
         onChange={(e) => onChange({ [key]: e.target.value })}
+        onBlur={type === "number" ? (e) => {
+          const val = parseFloat(e.target.value);
+          if (!isNaN(val)) onChange({ [key]: val.toFixed(2) });
+        } : undefined}
         readOnly={isAccountant}
       />
     </div>
