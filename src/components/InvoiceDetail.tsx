@@ -319,6 +319,7 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
     currency: invoice.currency ?? "EUR",
     status: invoice.status ?? "draft",
     project_id: invoice.project_id ?? "",
+    document_type: (invoice as any).document_type ?? "",
   });
 
   const patchForm = (updates: Partial<FormState>) =>
