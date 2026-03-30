@@ -23,6 +23,7 @@ export type Expense = {
   created_at: string;
   updated_at: string;
   project_id: string | null;
+  document_type: string | null;
 };
 
 export type ExpenseStatus = {

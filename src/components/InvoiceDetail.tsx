@@ -18,6 +18,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import type { Invoice } from "@/types/invoice";
+import { DOCUMENT_TYPES } from "@/types/documentTypes";
 import { useInvoiceActions, useLogInvoiceAction, ACTION_LABELS } from "@/hooks/useInvoiceActions";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -162,6 +163,7 @@ type FormState = {
   currency: string;
   status: string;
   project_id: string;
+  document_type: string;
 };
 
 function InvoiceFormFields({
@@ -192,6 +194,27 @@ function InvoiceFormFields({
     <div className="rounded-xl border border-border bg-card p-6 shadow-card">
       <h3 className="font-medium text-card-foreground mb-4">Στοιχεία Τιμολογίου</h3>
       <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
+          <Label>Τύπος Παραστατικού <span className="text-destructive">*</span></Label>
+          <Select
+            value={form.document_type || "none"}
+            onValueChange={(v) => onChange({ document_type: v === "none" ? "" : v })}
+            disabled={isAccountant}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Επιλέξτε τύπο..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              <SelectItem value="none">— Χωρίς τύπο —</SelectItem>
+              {DOCUMENT_TYPES.map((dt) => (
+                <SelectItem key={dt.code} value={dt.code}>
+                  <span className="font-medium">{dt.code}</span>
+                  <span className="text-muted-foreground ml-2">— {dt.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {field("Προμηθευτής", "supplier")}
         {field("ΑΦΜ Προμηθευτή", "supplier_vat")}
         {field("Αριθμός Τιμολογίου", "invoice_number")}
@@ -318,6 +341,7 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
     currency: invoice.currency ?? "EUR",
     status: invoice.status ?? "draft",
     project_id: invoice.project_id ?? "",
+    document_type: (invoice as any).document_type ?? "",
   });
 
   const patchForm = (updates: Partial<FormState>) =>
@@ -381,7 +405,8 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
           amount: data.amount ? parseFloat(data.amount) : null,
           currency: data.currency,
           status: data.status,
-          project_id: data.project_id || null,
+           project_id: data.project_id || null,
+           document_type: data.document_type || null,
           items: items as any,
           notes: notes || null,
         } as any)

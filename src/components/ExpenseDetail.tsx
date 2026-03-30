@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EXPENSE_STATUS_CONFIG, formatAmount } from "@/types/expense";
 import { useExpenseActions, useLogExpenseAction, EXPENSE_ACTION_LABELS } from "@/hooks/useExpenseActions";
 import type { Expense } from "@/types/expense";
+import { EXPENSE_DOCUMENT_TYPES } from "@/types/expenseDocumentTypes";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -209,6 +210,7 @@ type FormState = {
   notes: string;
   status: string;
   project_id: string;
+  document_type: string;
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -236,6 +238,7 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
     notes: expense.notes || "",
     status: expense.status,
     project_id: expense.project_id || "",
+    document_type: expense.document_type || "",
   });
 
   const patchForm = (updates: Partial<FormState>) =>
@@ -266,6 +269,7 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
           notes: form.notes || null,
           status: form.status,
           project_id: form.project_id || null,
+          document_type: form.document_type || null,
         })
         .eq("id", expense.id);
       if (error) throw error;
@@ -414,6 +418,27 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
           <div className="rounded-xl border border-border bg-card p-6 shadow-card">
             <h3 className="font-medium text-card-foreground mb-4">Στοιχεία Δαπάνης</h3>
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Τύπος Παραστατικού <span className="text-destructive">*</span></Label>
+                <Select
+                  value={form.document_type || "none"}
+                  onValueChange={(v) => patchForm({ document_type: v === "none" ? "" : v })}
+                  disabled={isAccountant}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Επιλέξτε τύπο..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="none">— Χωρίς τύπο —</SelectItem>
+                    {EXPENSE_DOCUMENT_TYPES.map((dt) => (
+                      <SelectItem key={dt.code} value={dt.code}>
+                        <span className="font-medium">{dt.code}</span>
+                        <span className="text-muted-foreground ml-2">— {dt.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Προμηθευτής</Label>
                 <Input value={form.supplier} onChange={(e) => patchForm({ supplier: e.target.value })} readOnly={isAccountant} />
