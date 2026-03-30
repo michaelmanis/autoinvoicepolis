@@ -131,7 +131,7 @@ function UploadDialog() {
           className="w-full"
           onClick={async () => {
             await runUpload(documentType || undefined);
-            setTimeout(() => { setOpen(false); reset(); setDocumentType(""); }, 1500);
+            setOpen(false); reset(); setDocumentType("");
           }}
           disabled={pendingCount === 0 || isUploading || !documentType}
         >
