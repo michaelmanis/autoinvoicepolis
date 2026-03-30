@@ -18,6 +18,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import type { Invoice } from "@/types/invoice";
+import { DOCUMENT_TYPES } from "@/types/documentTypes";
 import { useInvoiceActions, useLogInvoiceAction, ACTION_LABELS } from "@/hooks/useInvoiceActions";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;

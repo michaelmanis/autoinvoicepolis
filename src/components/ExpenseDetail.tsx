@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EXPENSE_STATUS_CONFIG, formatAmount } from "@/types/expense";
 import { useExpenseActions, useLogExpenseAction, EXPENSE_ACTION_LABELS } from "@/hooks/useExpenseActions";
 import type { Expense } from "@/types/expense";
+import { EXPENSE_DOCUMENT_TYPES } from "@/types/expenseDocumentTypes";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
