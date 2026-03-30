@@ -177,9 +177,9 @@ function InvoiceFormFields({
   isAccountant: boolean;
   projects: { id: string; name: string }[];
 }) {
-  const field = (label: string, key: keyof FormState, type = "text") => (
+  const field = (label: string, key: keyof FormState, type = "text", required = false) => (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label>{label}{required && <span className="text-destructive"> *</span>}</Label>
       <Input
         type={type}
         step={type === "number" ? "0.01" : undefined}
@@ -215,11 +215,11 @@ function InvoiceFormFields({
             </SelectContent>
           </Select>
         </div>
-        {field("Προμηθευτής", "supplier")}
-        {field("ΑΦΜ Προμηθευτή", "supplier_vat")}
-        {field("Αριθμός Τιμολογίου", "invoice_number")}
-        {field("Ποσό", "amount", "number")}
-        {field("Ημ. Τιμολογίου", "invoice_date", "date")}
+        {field("Προμηθευτής", "supplier", "text", true)}
+        {field("ΑΦΜ Προμηθευτή", "supplier_vat", "text", true)}
+        {field("Αριθμός Τιμολογίου", "invoice_number", "text", true)}
+        {field("Ποσό", "amount", "number", true)}
+        {field("Ημ. Τιμολογίου", "invoice_date", "date", true)}
         {field("Ημ. Λήξης", "due_date", "date")}
 
         {!isAccountant && (

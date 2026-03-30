@@ -440,23 +440,23 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Προμηθευτής</Label>
+                <Label>Προμηθευτής <span className="text-destructive">*</span></Label>
                 <Input value={form.supplier} onChange={(e) => patchForm({ supplier: e.target.value })} readOnly={isAccountant} />
               </div>
               <div className="space-y-2">
-                <Label>ΑΦΜ Προμηθευτή</Label>
+                <Label>ΑΦΜ Προμηθευτή <span className="text-destructive">*</span></Label>
                 <Input value={form.supplier_vat} onChange={(e) => patchForm({ supplier_vat: e.target.value })} readOnly={isAccountant} />
               </div>
               <div className="space-y-2">
-                <Label>Αρ. Παραστατικού</Label>
+                <Label>Αρ. Παραστατικού <span className="text-destructive">*</span></Label>
                 <Input value={form.expense_number} onChange={(e) => patchForm({ expense_number: e.target.value })} readOnly={isAccountant} />
               </div>
               <div className="space-y-2">
-                <Label>Ποσό</Label>
+                <Label>Ποσό <span className="text-destructive">*</span></Label>
                 <Input type="number" step="0.01" value={form.amount} onChange={(e) => patchForm({ amount: e.target.value })} readOnly={isAccountant} />
               </div>
               <div className="space-y-2">
-                <Label>Ημερομηνία</Label>
+                <Label>Ημερομηνία <span className="text-destructive">*</span></Label>
                 <Input type="date" value={form.expense_date} onChange={(e) => patchForm({ expense_date: e.target.value })} readOnly={isAccountant} />
               </div>
               <div className="space-y-2">
