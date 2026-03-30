@@ -207,14 +207,39 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
 
       {/* Footer */}
       <div className="space-y-1 border-t border-sidebar-border px-2 py-4">
-        {!collapsed && user &&
-        <p className="truncate px-3 pb-1 text-xs text-sidebar-foreground/50">{user.email}</p>
-        }
-        {!collapsed && (isAccountant || isAdmin) &&
-        <p className="truncate px-3 pb-1 text-xs font-medium text-warning">
-            {isAdmin ? "👑 Admin" : "📋 Λογιστής"}
-          </p>
-        }
+        {user && (
+          collapsed ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-center pb-1">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase">
+                    {user.email?.charAt(0) ?? "?"}
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                <p className="font-medium">{user.email}</p>
+                {(isAdmin || isAccountant) && (
+                  <p className="text-warning">{isAdmin ? "Admin" : "Λογιστής"}</p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex items-center gap-2.5 px-2 pb-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase">
+                {user.email?.charAt(0) ?? "?"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium text-sidebar-foreground">{user.email}</p>
+                {(isAdmin || isAccountant) && (
+                  <p className="text-[11px] font-medium text-warning">
+                    {isAdmin ? "👑 Admin" : "📋 Λογιστής"}
+                  </p>
+                )}
+              </div>
+            </div>
+          )
+        )}
 
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
@@ -224,14 +249,13 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
                 collapsed && "justify-center px-2"
               )}>
-              
               <LogOut className="h-5 w-5 shrink-0" />
               {!collapsed && <span>Αποσύνδεση</span>}
             </button>
           </TooltipTrigger>
-          {collapsed &&
-          <TooltipContent side="right" className="text-xs">Αποσύνδεση</TooltipContent>
-          }
+          {collapsed && (
+            <TooltipContent side="right" className="text-xs">Αποσύνδεση</TooltipContent>
+          )}
         </Tooltip>
       </div>
     </aside>);
