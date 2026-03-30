@@ -246,11 +246,18 @@ If a field is not visible for a given invoice, set it to null.`;
       });
     }
 
+    // Strip letters from VAT numbers (e.g. "ESA08631020" → "08631020")
+    const stripVatLetters = (vat: unknown): string | null => {
+      if (!vat || typeof vat !== "string") return null;
+      const digits = vat.replace(/[^0-9]/g, "");
+      return digits || null;
+    };
+
     // Insert all invoices
     const rows = invoiceList.map((inv: Record<string, unknown>) => ({
       user_id: user.id,
       supplier: (inv.supplier as string) || null,
-      supplier_vat: (inv.supplier_vat as string) || null,
+      supplier_vat: stripVatLetters(inv.supplier_vat),
       invoice_number: (inv.invoice_number as string) || null,
       invoice_date: (inv.invoice_date as string) || null,
       due_date: (inv.due_date as string) || null,
