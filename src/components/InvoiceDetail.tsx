@@ -185,6 +185,10 @@ function InvoiceFormFields({
         step={type === "number" ? "0.01" : undefined}
         value={form[key]}
         onChange={(e) => onChange({ [key]: e.target.value })}
+        onBlur={type === "number" ? (e) => {
+          const val = parseFloat(e.target.value);
+          if (!isNaN(val)) onChange({ [key]: val.toFixed(2) });
+        } : undefined}
         readOnly={isAccountant}
       />
     </div>
@@ -337,7 +341,7 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
     invoice_number: invoice.invoice_number ?? "",
     invoice_date: invoice.invoice_date ?? "",
     due_date: invoice.due_date ?? "",
-    amount: invoice.amount?.toString() ?? "",
+    amount: invoice.amount != null ? invoice.amount.toFixed(2) : "",
     currency: invoice.currency ?? "EUR",
     status: invoice.status ?? "draft",
     project_id: invoice.project_id ?? "",
