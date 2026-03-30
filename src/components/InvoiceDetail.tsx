@@ -215,11 +215,11 @@ function InvoiceFormFields({
             </SelectContent>
           </Select>
         </div>
-        {field("Προμηθευτής", "supplier")}
-        {field("ΑΦΜ Προμηθευτή", "supplier_vat")}
-        {field("Αριθμός Τιμολογίου", "invoice_number")}
-        {field("Ποσό", "amount", "number")}
-        {field("Ημ. Τιμολογίου", "invoice_date", "date")}
+        {field("Προμηθευτής", "supplier", "text", true)}
+        {field("ΑΦΜ Προμηθευτή", "supplier_vat", "text", true)}
+        {field("Αριθμός Τιμολογίου", "invoice_number", "text", true)}
+        {field("Ποσό", "amount", "number", true)}
+        {field("Ημ. Τιμολογίου", "invoice_date", "date", true)}
         {field("Ημ. Λήξης", "due_date", "date")}
 
         {!isAccountant && (
