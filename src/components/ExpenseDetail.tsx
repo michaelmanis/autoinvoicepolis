@@ -209,6 +209,7 @@ type FormState = {
   notes: string;
   status: string;
   project_id: string;
+  document_type: string;
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
