@@ -177,9 +177,9 @@ function InvoiceFormFields({
   isAccountant: boolean;
   projects: { id: string; name: string }[];
 }) {
-  const field = (label: string, key: keyof FormState, type = "text") => (
+  const field = (label: string, key: keyof FormState, type = "text", required = false) => (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label>{label}{required && <span className="text-destructive"> *</span>}</Label>
       <Input
         type={type}
         step={type === "number" ? "0.01" : undefined}
