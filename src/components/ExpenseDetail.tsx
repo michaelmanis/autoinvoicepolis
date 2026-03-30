@@ -268,6 +268,7 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
           notes: form.notes || null,
           status: form.status,
           project_id: form.project_id || null,
+          document_type: form.document_type || null,
         })
         .eq("id", expense.id);
       if (error) throw error;
