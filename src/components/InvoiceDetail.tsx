@@ -162,6 +162,7 @@ type FormState = {
   currency: string;
   status: string;
   project_id: string;
+  document_type: string;
 };
 
 function InvoiceFormFields({
