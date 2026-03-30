@@ -207,10 +207,17 @@ If a field is not visible, set it to null.`;
       });
     }
 
+    // Strip letters from VAT numbers (e.g. "ESA08631020" → "08631020")
+    const stripVatLetters = (vat: unknown): string | null => {
+      if (!vat || typeof vat !== "string") return null;
+      const digits = vat.replace(/[^0-9]/g, "");
+      return digits || null;
+    };
+
     const rows = expenseList.map((exp: Record<string, unknown>) => ({
       user_id: user.id,
       supplier: (exp.supplier as string) || null,
-      supplier_vat: (exp.supplier_vat as string) || null,
+      supplier_vat: stripVatLetters(exp.supplier_vat),
       expense_number: (exp.expense_number as string) || null,
       expense_date: (exp.expense_date as string) || null,
       due_date: (exp.due_date as string) || null,
