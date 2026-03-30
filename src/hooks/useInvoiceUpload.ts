@@ -109,16 +109,25 @@ export function useInvoiceUpload() {
         const item = queue[i];
         const filePath = `${user.id}/${Date.now()}_${sanitizeFileName(item.file.name)}`;
 
+        console.log("[InvoiceUpload] Uploading to storage:", filePath);
         const { error: uploadError } = await supabase.storage
           .from("invoices")
           .upload(filePath, item.file);
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("[InvoiceUpload] Storage upload error:", uploadError);
+          throw uploadError;
+        }
 
+        console.log("[InvoiceUpload] Invoking extract-invoice function...");
         const { data: fnData, error: fnError } = await supabase.functions.invoke(
           "extract-invoice",
           { body: { file_path: filePath, file_name: item.file.name, document_type: documentType } },
         );
-        if (fnError) throw fnError;
+        if (fnError) {
+          console.error("[InvoiceUpload] Edge function error:", fnError);
+          throw fnError;
+        }
+        console.log("[InvoiceUpload] Extract result:", fnData);
 
         return { index: i, count: (fnData as any)?.count ?? 1 };
       })
