@@ -383,7 +383,8 @@ export default function InvoiceDetail({ invoice, onBack, isAccountant = false }:
           amount: data.amount ? parseFloat(data.amount) : null,
           currency: data.currency,
           status: data.status,
-          project_id: data.project_id || null,
+           project_id: data.project_id || null,
+           document_type: data.document_type || null,
           items: items as any,
           notes: notes || null,
         } as any)
