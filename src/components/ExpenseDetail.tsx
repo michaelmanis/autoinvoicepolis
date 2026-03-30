@@ -232,7 +232,7 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
     expense_number: expense.expense_number || "",
     expense_date: expense.expense_date || "",
     due_date: expense.due_date || "",
-    amount: expense.amount?.toString() || "",
+    amount: expense.amount != null ? expense.amount.toFixed(2) : "",
     currency: expense.currency || "EUR",
     description: expense.description || "",
     notes: expense.notes || "",
