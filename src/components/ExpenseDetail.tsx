@@ -237,6 +237,7 @@ export default function ExpenseDetail({ expense, onBack, isAccountant = false }:
     notes: expense.notes || "",
     status: expense.status,
     project_id: expense.project_id || "",
+    document_type: expense.document_type || "",
   });
 
   const patchForm = (updates: Partial<FormState>) =>
