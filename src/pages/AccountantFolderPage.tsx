@@ -151,6 +151,7 @@ function FolderList({
   isPending,
   exportFn,
   emptyLabel,
+  zipPrefix,
 }: {
   items: FolderItem[];
   groupByMonth: (item: FolderItem) => string;
@@ -160,6 +161,7 @@ function FolderList({
   isPending: boolean;
   exportFn: (monthKey: string, items: FolderItem[]) => void;
   emptyLabel: string;
+  zipPrefix: string;
 }) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
 
