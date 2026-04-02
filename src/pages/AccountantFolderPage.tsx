@@ -229,13 +229,22 @@ function FolderList({
                 </div>
               </button>
 
-              <Button
-                variant="outline" size="sm" className="shrink-0 gap-1.5 text-xs"
-                onClick={() => exportFn(monthKey, monthItems)}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Excel
-              </Button>
+              <div className="flex gap-1.5 shrink-0">
+                <Button
+                  variant="outline" size="sm" className="gap-1.5 text-xs"
+                  onClick={() => downloadMonthZip(monthKey, monthItems, zipPrefix)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  ZIP
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="gap-1.5 text-xs"
+                  onClick={() => exportFn(monthKey, monthItems)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Excel
+                </Button>
+              </div>
             </div>
 
             {isOpen && (
