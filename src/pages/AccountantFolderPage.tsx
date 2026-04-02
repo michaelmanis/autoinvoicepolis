@@ -97,7 +97,50 @@ type FolderItem = {
   label: string;
   sublabel: string;
   date: string | null;
+  file_url: string | null;
+  file_name: string | null;
 };
+
+async function downloadMonthZip(monthKey: string, items: FolderItem[], prefix: string) {
+  const filesWithUrl = items.filter((i) => i.file_url);
+  if (filesWithUrl.length === 0) {
+    toast.error("Δεν υπάρχουν αρχεία για λήψη");
+    return;
+  }
+  toast.info(`Προετοιμασία ${filesWithUrl.length} αρχείων…`);
+  const zip = new JSZip();
+  const seen = new Set<string>();
+
+  for (const item of filesWithUrl) {
+    try {
+      const { data, error } = await supabase.functions.invoke("proxy-file", {
+        body: { file_path: item.file_url },
+      });
+      if (error || !data) continue;
+      // data is already a Blob from invoke
+      let name = item.file_name || item.file_url!.split("/").pop() || `${item.id}.pdf`;
+      // deduplicate names
+      if (seen.has(name)) {
+        const ext = name.includes(".") ? "." + name.split(".").pop() : "";
+        const base = name.replace(ext, "");
+        name = `${base}_${item.id.slice(0, 6)}${ext}`;
+      }
+      seen.add(name);
+      zip.file(name, data);
+    } catch {
+      // skip failed files
+    }
+  }
+
+  if (Object.keys(zip.files).length === 0) {
+    toast.error("Αποτυχία λήψης αρχείων");
+    return;
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  saveAs(blob, `${prefix}_${monthKey}.zip`);
+  toast.success("Το ZIP κατέβηκε επιτυχώς");
+}
 
 function FolderList({
   items,
