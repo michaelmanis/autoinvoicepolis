@@ -120,6 +120,14 @@ Carefully scan the ENTIRE document and identify ALL distinct expenses present.
 Focus on extracting the TOTAL AMOUNT (including VAT), supplier information, and dates.
 Do NOT extract individual line items — only the final total amount matters.
 If only one expense exists, return an array with one item.
+
+SUPPLIER vs CUSTOMER — CRITICAL:
+A receipt/invoice typically has TWO parties: the SUPPLIER (who issued it) and the CUSTOMER (who is being billed).
+- "supplier" = the company that ISSUED the document (the seller/vendor). Their name and VAT appear near labels like "From", "Seller", "Vendor", "Issuer", "Πωλητής", "Εκδότης", "Προμηθευτής".
+- The CUSTOMER is the party RECEIVING the document (the buyer). Their info appears near labels like "To", "Bill To", "Buyer", "Customer", "Αγοραστής", "Πελάτης", "Προς".
+- You MUST extract the SUPPLIER's name and VAT, NOT the customer/buyer's.
+- If the document shows both VATs, pick the one belonging to the issuer/seller.
+
 AMOUNT FORMAT: All amounts must be numbers rounded to exactly 2 decimal places (e.g. 747.60).
 Dates must be in YYYY-MM-DD format.
 If a field is not visible, set it to null.`;
