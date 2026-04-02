@@ -426,6 +426,7 @@ export default function AccountantFolderPage() {
                 exportExpensesToExcel(mk, exps);
               }}
               emptyLabel="Δεν υπάρχουν δαπάνες για έλεγχο"
+              zipPrefix="Δαπάνες"
             />
           </TabsContent>
         </Tabs>
