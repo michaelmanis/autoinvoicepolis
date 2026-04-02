@@ -121,12 +121,15 @@ Focus on extracting the TOTAL AMOUNT (including VAT), supplier information, and 
 Do NOT extract individual line items — only the final total amount matters.
 If only one expense exists, return an array with one item.
 
-SUPPLIER vs CUSTOMER — CRITICAL:
-A receipt/invoice typically has TWO parties: the SUPPLIER (who issued it) and the CUSTOMER (who is being billed).
-- "supplier" = the company that ISSUED the document (the seller/vendor). Their name and VAT appear near labels like "From", "Seller", "Vendor", "Issuer", "Πωλητής", "Εκδότης", "Προμηθευτής".
-- The CUSTOMER is the party RECEIVING the document (the buyer). Their info appears near labels like "To", "Bill To", "Buyer", "Customer", "Αγοραστής", "Πελάτης", "Προς".
-- You MUST extract the SUPPLIER's name and VAT, NOT the customer/buyer's.
-- If the document shows both VATs, pick the one belonging to the issuer/seller.
+SUPPLIER vs CUSTOMER — CRITICAL (READ CAREFULLY):
+1. The SUPPLIER / ISSUER / SELLER — the company that created and sent the invoice/receipt.
+2. The CUSTOMER / BUYER — the company being billed (appears under "Invoice to", "Bill to", "Customer", "Sold to", "Consign to", "Send to", "Πελάτης", "Προς", "Αγοραστής").
+
+RULES:
+- supplier and supplier_vat MUST belong to the ISSUER (party #1), NEVER to the customer/buyer (party #2).
+- Any VAT that appears inside or after "Invoice to", "Bill to", "Customer", "Buyer", "Consign to", "Send to" sections belongs to the CUSTOMER — do NOT use it.
+- The issuer's VAT typically appears in the company header, registration info, or footer.
+- If you cannot confidently determine which VAT belongs to the issuer, set supplier_vat to null.
 
 AMOUNT FORMAT: All amounts must be numbers rounded to exactly 2 decimal places (e.g. 747.60).
 Dates must be in YYYY-MM-DD format.
