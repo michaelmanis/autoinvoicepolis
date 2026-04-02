@@ -136,12 +136,17 @@ Carefully scan the ENTIRE document and identify ALL distinct invoices present.
 Return each invoice as a SEPARATE entry in the invoices array.
 If only one invoice exists, return an array with one item.
 
-SUPPLIER vs CUSTOMER — CRITICAL:
-An invoice typically has TWO parties: the SUPPLIER (who issued the invoice) and the CUSTOMER (who is being invoiced / billed). 
-- "supplier" = the company that ISSUED the invoice (the seller/vendor). Their name and VAT appear near labels like "From", "Seller", "Vendor", "Issuer", "Πωλητής", "Εκδότης", "Προμηθευτής".
-- The CUSTOMER is the party RECEIVING the invoice (the buyer). Their info appears near labels like "To", "Bill To", "Buyer", "Customer", "Αγοραστής", "Πελάτης", "Προς".
-- You MUST extract the SUPPLIER's name and VAT, NOT the customer/buyer's.
-- If the document shows both VATs, pick the one belonging to the issuer/seller.
+SUPPLIER vs CUSTOMER — CRITICAL (READ CAREFULLY):
+An invoice has TWO parties:
+1. The SUPPLIER / ISSUER / SELLER — the company that created and sent the invoice.
+2. The CUSTOMER / BUYER — the company being billed (appears under "Invoice to", "Bill to", "Customer", "Sold to", "Consign to", "Send to", "Πελάτης", "Προς", "Αγοραστής").
+
+RULES:
+- supplier and supplier_vat MUST belong to the ISSUER (party #1), NEVER to the customer/buyer (party #2).
+- Any VAT/NIF/CIF/TIN that appears INSIDE or IMMEDIATELY AFTER sections labeled "Invoice to", "Bill to", "Customer", "Buyer", "Sold to", "Consign to", "Send to", "VAT" under customer info — belongs to the CUSTOMER. Do NOT use it for supplier_vat.
+- The issuer's VAT/NIF typically appears in the company header/logo area, registration footer, or near the issuer's address block at the top of the document.
+- Example: if the header says "CHEMIPOL S.A. — NIF ES A08631020" and the "Invoice to" section shows "VAT EL800616392", then supplier="CHEMIPOL, S.A." and supplier_vat="A08631020". The EL800616392 is the CUSTOMER's VAT and must be ignored.
+- If you cannot confidently determine which VAT belongs to the issuer, set supplier_vat to null.
 
 PRODUCT CODE EXTRACTION — CRITICAL RULES:
 The product code (product_id) is almost always EMBEDDED INSIDE the product description/name. It is typically an alphanumeric code (letters+numbers or just numbers) that appears AFTER the brand/product name. Examples:
