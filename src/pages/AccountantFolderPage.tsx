@@ -18,6 +18,10 @@ import { getMonthKey, formatMonthKey, type Invoice } from "@/types/invoice";
 import { getExpenseMonthKey, type Expense } from "@/types/expense";
 import { formatMonthKey as formatMonthKeyInv } from "@/types/invoice";
 import * as XLSX from "xlsx";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const STATUS_BADGE = {
   accountant_approved: (
