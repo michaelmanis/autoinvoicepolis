@@ -136,6 +136,13 @@ Carefully scan the ENTIRE document and identify ALL distinct invoices present.
 Return each invoice as a SEPARATE entry in the invoices array.
 If only one invoice exists, return an array with one item.
 
+SUPPLIER vs CUSTOMER — CRITICAL:
+An invoice typically has TWO parties: the SUPPLIER (who issued the invoice) and the CUSTOMER (who is being invoiced / billed). 
+- "supplier" = the company that ISSUED the invoice (the seller/vendor). Their name and VAT appear near labels like "From", "Seller", "Vendor", "Issuer", "Πωλητής", "Εκδότης", "Προμηθευτής".
+- The CUSTOMER is the party RECEIVING the invoice (the buyer). Their info appears near labels like "To", "Bill To", "Buyer", "Customer", "Αγοραστής", "Πελάτης", "Προς".
+- You MUST extract the SUPPLIER's name and VAT, NOT the customer/buyer's.
+- If the document shows both VATs, pick the one belonging to the issuer/seller.
+
 PRODUCT CODE EXTRACTION — CRITICAL RULES:
 The product code (product_id) is almost always EMBEDDED INSIDE the product description/name. It is typically an alphanumeric code (letters+numbers or just numbers) that appears AFTER the brand/product name. Examples:
 - "SENSICARE M 5000" → product_id = "M 5000"
