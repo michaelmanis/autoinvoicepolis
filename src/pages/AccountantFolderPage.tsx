@@ -18,6 +18,10 @@ import { getMonthKey, formatMonthKey, type Invoice } from "@/types/invoice";
 import { getExpenseMonthKey, type Expense } from "@/types/expense";
 import { formatMonthKey as formatMonthKeyInv } from "@/types/invoice";
 import * as XLSX from "xlsx";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const STATUS_BADGE = {
   accountant_approved: (
@@ -93,7 +97,50 @@ type FolderItem = {
   label: string;
   sublabel: string;
   date: string | null;
+  file_url: string | null;
+  file_name: string | null;
 };
+
+async function downloadMonthZip(monthKey: string, items: FolderItem[], prefix: string) {
+  const filesWithUrl = items.filter((i) => i.file_url);
+  if (filesWithUrl.length === 0) {
+    toast.error("Δεν υπάρχουν αρχεία για λήψη");
+    return;
+  }
+  toast.info(`Προετοιμασία ${filesWithUrl.length} αρχείων…`);
+  const zip = new JSZip();
+  const seen = new Set<string>();
+
+  for (const item of filesWithUrl) {
+    try {
+      const { data, error } = await supabase.functions.invoke("proxy-file", {
+        body: { file_path: item.file_url },
+      });
+      if (error || !data) continue;
+      // data is already a Blob from invoke
+      let name = item.file_name || item.file_url!.split("/").pop() || `${item.id}.pdf`;
+      // deduplicate names
+      if (seen.has(name)) {
+        const ext = name.includes(".") ? "." + name.split(".").pop() : "";
+        const base = name.replace(ext, "");
+        name = `${base}_${item.id.slice(0, 6)}${ext}`;
+      }
+      seen.add(name);
+      zip.file(name, data);
+    } catch {
+      // skip failed files
+    }
+  }
+
+  if (Object.keys(zip.files).length === 0) {
+    toast.error("Αποτυχία λήψης αρχείων");
+    return;
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  saveAs(blob, `${prefix}_${monthKey}.zip`);
+  toast.success("Το ZIP κατέβηκε επιτυχώς");
+}
 
 function FolderList({
   items,
@@ -104,6 +151,7 @@ function FolderList({
   isPending,
   exportFn,
   emptyLabel,
+  zipPrefix,
 }: {
   items: FolderItem[];
   groupByMonth: (item: FolderItem) => string;
@@ -113,6 +161,7 @@ function FolderList({
   isPending: boolean;
   exportFn: (monthKey: string, items: FolderItem[]) => void;
   emptyLabel: string;
+  zipPrefix: string;
 }) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
 
@@ -180,13 +229,22 @@ function FolderList({
                 </div>
               </button>
 
-              <Button
-                variant="outline" size="sm" className="shrink-0 gap-1.5 text-xs"
-                onClick={() => exportFn(monthKey, monthItems)}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Excel
-              </Button>
+              <div className="flex gap-1.5 shrink-0">
+                <Button
+                  variant="outline" size="sm" className="gap-1.5 text-xs"
+                  onClick={() => downloadMonthZip(monthKey, monthItems, zipPrefix)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  ZIP
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="gap-1.5 text-xs"
+                  onClick={() => exportFn(monthKey, monthItems)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Excel
+                </Button>
+              </div>
             </div>
 
             {isOpen && (
@@ -288,6 +346,8 @@ export default function AccountantFolderPage() {
     label: inv.invoice_number || inv.file_name || "Χωρίς αριθμό",
     sublabel: `${inv.supplier || "Άγνωστος"} ${inv.invoice_date ? `· ${new Date(inv.invoice_date).toLocaleDateString("el-GR")}` : ""}`,
     date: inv.invoice_date || inv.created_at,
+    file_url: inv.file_url,
+    file_name: inv.file_name,
   }));
 
   const expenseItems: FolderItem[] = (expenses ?? []).map((exp) => ({
@@ -298,6 +358,8 @@ export default function AccountantFolderPage() {
     label: exp.expense_number || exp.file_name || "Χωρίς αριθμό",
     sublabel: `${exp.supplier || "Άγνωστος"} ${exp.expense_date ? `· ${new Date(exp.expense_date).toLocaleDateString("el-GR")}` : ""}`,
     date: exp.expense_date || exp.created_at,
+    file_url: exp.file_url,
+    file_name: exp.file_name,
   }));
 
   const getMonth = (item: FolderItem) => {
@@ -347,6 +409,7 @@ export default function AccountantFolderPage() {
                 exportInvoicesToExcel(mk, invs);
               }}
               emptyLabel="Δεν υπάρχουν τιμολόγια για έλεγχο"
+              zipPrefix="Τιμολόγια"
             />
           </TabsContent>
 
@@ -363,6 +426,7 @@ export default function AccountantFolderPage() {
                 exportExpensesToExcel(mk, exps);
               }}
               emptyLabel="Δεν υπάρχουν δαπάνες για έλεγχο"
+              zipPrefix="Δαπάνες"
             />
           </TabsContent>
         </Tabs>
