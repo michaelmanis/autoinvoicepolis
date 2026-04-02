@@ -95,8 +95,8 @@ serve(async (req) => {
                 items: {
                   type: "object",
                   properties: {
-                    supplier: { type: "string", description: "Supplier/vendor name" },
-                    supplier_vat: { type: "string", description: "Supplier VAT/Tax ID" },
+                    supplier: { type: "string", description: "Name of the company that ISSUED this receipt/invoice (seller/vendor). Do NOT use the 'Invoice to' / 'Bill to' / customer name." },
+                    supplier_vat: { type: "string", description: "VAT/Tax ID of the ISSUER/SELLER only. Do NOT use any VAT found under 'Invoice to', 'Bill to', 'Customer', 'Buyer' sections. If unsure, set to null." },
                     expense_number: { type: "string", description: "Receipt/expense/invoice number" },
                     expense_date: { type: "string", description: "Date (YYYY-MM-DD)" },
                     due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
