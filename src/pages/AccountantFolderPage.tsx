@@ -409,6 +409,7 @@ export default function AccountantFolderPage() {
                 exportInvoicesToExcel(mk, invs);
               }}
               emptyLabel="Δεν υπάρχουν τιμολόγια για έλεγχο"
+              zipPrefix="Τιμολόγια"
             />
           </TabsContent>
 
