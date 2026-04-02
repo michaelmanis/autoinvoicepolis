@@ -335,6 +335,8 @@ export default function AccountantFolderPage() {
     label: inv.invoice_number || inv.file_name || "Χωρίς αριθμό",
     sublabel: `${inv.supplier || "Άγνωστος"} ${inv.invoice_date ? `· ${new Date(inv.invoice_date).toLocaleDateString("el-GR")}` : ""}`,
     date: inv.invoice_date || inv.created_at,
+    file_url: inv.file_url,
+    file_name: inv.file_name,
   }));
 
   const expenseItems: FolderItem[] = (expenses ?? []).map((exp) => ({
@@ -345,6 +347,8 @@ export default function AccountantFolderPage() {
     label: exp.expense_number || exp.file_name || "Χωρίς αριθμό",
     sublabel: `${exp.supplier || "Άγνωστος"} ${exp.expense_date ? `· ${new Date(exp.expense_date).toLocaleDateString("el-GR")}` : ""}`,
     date: exp.expense_date || exp.created_at,
+    file_url: exp.file_url,
+    file_name: exp.file_name,
   }));
 
   const getMonth = (item: FolderItem) => {
