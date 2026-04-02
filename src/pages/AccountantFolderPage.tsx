@@ -101,6 +101,16 @@ type FolderItem = {
   file_name: string | null;
 };
 
+/** Extract the relative storage path from a full signed/public URL or return as-is if already relative */
+function extractStoragePath(fileUrl: string): string {
+  // Match paths like: /storage/v1/object/sign/invoices/archived/2026-03/file.pdf?token=...
+  // or /storage/v1/object/public/invoices/path/file.pdf
+  const match = fileUrl.match(/\/storage\/v1\/object\/(?:sign|public)\/invoices\/([^?]+)/);
+  if (match) return match[1];
+  // Already a relative path
+  return fileUrl;
+}
+
 async function downloadMonthZip(monthKey: string, items: FolderItem[], prefix: string) {
   const filesWithUrl = items.filter((i) => i.file_url);
   if (filesWithUrl.length === 0) {
@@ -113,8 +123,9 @@ async function downloadMonthZip(monthKey: string, items: FolderItem[], prefix: s
 
   for (const item of filesWithUrl) {
     try {
+      const storagePath = extractStoragePath(item.file_url!);
       const { data, error } = await supabase.functions.invoke("proxy-file", {
-        body: { file_path: item.file_url },
+        body: { file_path: storagePath },
       });
       if (error || !data) continue;
       // data is already a Blob from invoke
