@@ -109,8 +109,14 @@ export default function Auth() {
               const { error } = await supabase.auth.signUp({ email: demoEmail, password: demoPass });
               if (error) throw error;
               // auto-confirm is enabled, so sign in immediately
-              const { error: loginErr } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPass });
+              const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPass });
               if (loginErr) throw loginErr;
+              // Seed demo data in background
+              supabase.functions.invoke("seed-demo-data", {
+                headers: loginData.session?.access_token
+                  ? { Authorization: `Bearer ${loginData.session.access_token}` }
+                  : undefined,
+              }).catch(console.error);
               navigate("/");
             } catch (error: any) {
               toast({ title: "Σφάλμα", description: error.message, variant: "destructive" });
