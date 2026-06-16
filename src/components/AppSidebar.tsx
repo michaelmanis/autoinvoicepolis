@@ -158,7 +158,7 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
       {/* Header — hide collapse toggle on mobile (sidebar is in a sheet) */}
       {collapsed ?
       <div className="flex flex-col items-center border-b border-sidebar-border py-3 gap-2">
-          <img src={logoIcon.url} alt="DocuHandler" className="h-12 w-12" />
+          <img src={logoIcon.url} alt="DocuHandler" className="h-10 w-10" />
           <button
           onClick={() => setCollapsed(false)}
           className="hidden md:flex h-7 w-7 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
