@@ -170,7 +170,7 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
 
       <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
           <div className="flex items-center">
-            <img src={logo.url} alt="DocuHandler" className="h-8 w-auto" />
+            <img src={logo.url} alt="DocuHandler" className="h-10 w-auto" />
           </div>
           <button
           onClick={() => setCollapsed(true)}
