@@ -6,7 +6,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.png.asset.json";
+import logoIcon from "@/assets/logo-icon.png.asset.json";
 import { useCompanyFilter } from "@/hooks/useCompanyFilter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
