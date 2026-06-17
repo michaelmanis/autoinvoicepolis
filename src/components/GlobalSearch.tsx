@@ -313,6 +313,68 @@ export default function GlobalSearch({ open, onOpenChange, onNavigate }: GlobalS
               )}
             </div>
           </ScrollArea>
+        ) : input.trim().length >= 2 ? (
+          <ScrollArea className="h-[400px] px-3 py-3">
+            <div className="px-2 pb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Σημασιολογικά αποτελέσματα
+              </span>
+              {semLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+            </div>
+            {semResults.length === 0 && !semLoading ? (
+              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                Κανένα αποτέλεσμα. Πατήστε Enter για να ρωτήσετε το AI.
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {semResults.map((r) => {
+                  const meta = KIND_META[r.kind];
+                  const Icon = meta?.Icon ?? FileText;
+                  const title =
+                    r.metadata?.supplier ||
+                    r.metadata?.name ||
+                    r.metadata?.company ||
+                    r.metadata?.invoice_number ||
+                    r.metadata?.file_name ||
+                    r.content.slice(0, 60);
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => openResult(r)}
+                      className="w-full text-left flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground truncate">{title}</span>
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
+                            {meta?.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {r.content}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0 mt-1">
+                        {Math.round(r.similarity * 100)}%
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-3 px-3 pt-3 border-t border-border">
+              <button
+                onClick={() => send(input)}
+                className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+              >
+                <Sparkles className="h-4 w-4 text-primary" />
+                Ρωτήστε το AI: <span className="font-medium truncate">"{input}"</span>
+              </button>
+            </div>
+          </ScrollArea>
         ) : (
           <div className="flex flex-col items-center justify-center h-[400px] text-center px-8">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-4">
@@ -322,9 +384,9 @@ export default function GlobalSearch({ open, onOpenChange, onNavigate }: GlobalS
               Τι ψάχνετε;
             </h3>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Αναζητήστε τιμολόγια, δαπάνες ή projects, ή ρωτήστε οτιδήποτε σχετικό με τα δεδομένα σας.
+              Αναζητήστε τιμολόγια, δαπάνες, κάρτες ή projects με AI semantic search, ή ρωτήστε οτιδήποτε.
             </p>
-            <div className="flex flex-wrap gap-2 mt-6">
+            <div className="flex flex-wrap gap-2 mt-6 justify-center">
               {[
                 "Ποιά τιμολόγια είναι σε εκκρεμότητα;",
                 "Εμφάνισε τις δαπάνες αυτού του μήνα",
@@ -341,6 +403,7 @@ export default function GlobalSearch({ open, onOpenChange, onNavigate }: GlobalS
             </div>
           </div>
         )}
+
 
         {/* Input */}
         <form
