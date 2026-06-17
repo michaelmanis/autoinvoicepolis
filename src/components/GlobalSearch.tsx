@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Search, Send, Bot, User, Loader2, Sparkles, FileText, Receipt, Contact, FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,23 @@ import { supabase } from "@/integrations/supabase/client";
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/one-ai-chat`;
 
 type Msg = { role: "user" | "assistant"; content: string };
+
+type SemanticResult = {
+  id: string;
+  kind: "invoice" | "expense" | "business_card" | "project";
+  ref_id: string;
+  content: string;
+  metadata: Record<string, any>;
+  similarity: number;
+};
+
+const KIND_META: Record<SemanticResult["kind"], { view: string; label: string; Icon: any }> = {
+  invoice: { view: "invoices", label: "Τιμολόγιο", Icon: FileText },
+  expense: { view: "expenses", label: "Δαπάνη", Icon: Receipt },
+  business_card: { view: "business-cards", label: "Κάρτα", Icon: Contact },
+  project: { view: "projects", label: "Project", Icon: FolderKanban },
+};
+
 
 async function streamChat({
   messages,
