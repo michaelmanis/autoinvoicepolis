@@ -60,11 +60,12 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
     const { data: matches, error } = await admin.rpc("match_document_embeddings", {
-      query_embedding: queryEmbedding as unknown as string,
+      query_embedding: `[${queryEmbedding.join(",")}]` as unknown as string,
       match_user_id: user.id,
       match_count: typeof limit === "number" ? Math.min(Math.max(limit, 1), 25) : 8,
       filter_kinds: Array.isArray(kinds) && kinds.length ? kinds : null,
     });
+
     if (error) {
       console.error("RPC error:", error);
       return new Response(JSON.stringify({ error: error.message }), {

@@ -78,9 +78,10 @@ serve(async (req) => {
       kind: it.kind,
       ref_id: it.ref_id,
       content: it.content.slice(0, 8000),
-      embedding: vectors[idx] as unknown as string, // pgvector accepts array via supabase-js
+      embedding: `[${vectors[idx].join(",")}]`,
       metadata: it.metadata ?? {},
     }));
+
 
     const { error } = await admin
       .from("document_embeddings")
