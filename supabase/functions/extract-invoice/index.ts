@@ -297,10 +297,34 @@ If a field is not visible for a given invoice, set it to null.`;
       });
     }
 
+    // Fire-and-forget: generate embeddings for semantic search
+    try {
+      const items = (invoices ?? []).map((inv: any) => ({
+        kind: "invoice",
+        ref_id: inv.id,
+        content: [
+          inv.supplier, inv.supplier_vat, inv.invoice_number,
+          inv.invoice_date, inv.amount ? `${inv.amount} ${inv.currency || "EUR"}` : null,
+          inv.document_type, inv.file_name,
+          Array.isArray(inv.items) ? inv.items.map((i: any) => i?.description || i?.name).filter(Boolean).join(", ") : null,
+          inv.raw_ocr_text,
+        ].filter(Boolean).join(" | "),
+        metadata: { supplier: inv.supplier, amount: inv.amount, invoice_number: inv.invoice_number, file_name: inv.file_name },
+      }));
+      if (items.length) {
+        fetch(`${supabaseUrl}/functions/v1/generate-embedding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: authHeader },
+          body: JSON.stringify({ items }),
+        }).catch((e) => console.error("embed dispatch", e));
+      }
+    } catch (e) { console.error("embed prep", e); }
+
     return new Response(
       JSON.stringify({ invoices, count: invoices?.length ?? 0, extracted: invoiceList }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (e) {
     console.error("Error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {

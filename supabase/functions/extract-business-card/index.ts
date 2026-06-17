@@ -171,9 +171,29 @@ Be thorough — scan the entire image carefully for every distinct business card
 
     if (insertError) throw new Error("Failed to save: " + insertError.message);
 
+    try {
+      const items = (saved ?? []).map((c: any) => ({
+        kind: "business_card",
+        ref_id: c.id,
+        content: [
+          c.company, c.contact_name, c.contact_surname, c.title,
+          c.email, c.mobile_phone, c.file_name,
+        ].filter(Boolean).join(" | "),
+        metadata: { company: c.company, name: `${c.contact_name || ""} ${c.contact_surname || ""}`.trim(), email: c.email },
+      }));
+      if (items.length) {
+        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/generate-embedding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: authHeader },
+          body: JSON.stringify({ items }),
+        }).catch((e) => console.error("embed dispatch", e));
+      }
+    } catch (e) { console.error("embed prep", e); }
+
     return new Response(JSON.stringify({ success: true, cards: saved, count: saved?.length || 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err) {
     console.error("extract-business-card error:", err);
     return new Response(JSON.stringify({ error: err.message }), {

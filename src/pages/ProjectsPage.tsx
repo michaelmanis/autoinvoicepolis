@@ -52,12 +52,25 @@ export default function ProjectsPage() {
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      const { error } = await supabase.from("projects").insert({
+      const { data: inserted, error } = await supabase.from("projects").insert({
         name: form.name.trim(),
         description: form.description.trim() || null,
         user_id: user.id,
-      });
+      }).select().single();
       if (error) throw error;
+      // Fire-and-forget embedding
+      if (inserted?.id) {
+        supabase.functions.invoke("generate-embedding", {
+          body: {
+            items: [{
+              kind: "project",
+              ref_id: inserted.id,
+              content: [inserted.name, inserted.description].filter(Boolean).join(" | "),
+              metadata: { name: inserted.name },
+            }],
+          },
+        }).catch(() => {});
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -69,6 +82,7 @@ export default function ProjectsPage() {
       toast({ title: "Σφάλμα", description: err.message, variant: "destructive" });
     },
   });
+
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
