@@ -124,6 +124,42 @@ export type Database = {
           },
         ]
       }
+      document_embeddings: {
+        Row: {
+          content: string
+          created_at: string
+          embedding: string
+          id: string
+          kind: string
+          metadata: Json
+          ref_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          embedding: string
+          id?: string
+          kind: string
+          metadata?: Json
+          ref_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          embedding?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          ref_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       erp_settings: {
         Row: {
           api_key: string
@@ -486,6 +522,22 @@ export type Database = {
       is_company_member: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
+      }
+      match_document_embeddings: {
+        Args: {
+          filter_kinds?: string[]
+          match_count?: number
+          match_user_id: string
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          kind: string
+          metadata: Json
+          ref_id: string
+          similarity: number
+        }[]
       }
     }
     Enums: {
