@@ -145,12 +145,44 @@ export default function GlobalSearch({ open, onOpenChange, onNavigate }: GlobalS
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      // Reset on close
       setInput("");
       setMessages([]);
       setMode("search");
+      setSemResults([]);
     }
   }, [open]);
+
+  // Debounced semantic search while typing in search mode
+  useEffect(() => {
+    if (mode !== "search") return;
+    const q = input.trim();
+    if (q.length < 2) {
+      setSemResults([]);
+      setSemLoading(false);
+      return;
+    }
+    setSemLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("semantic-search", {
+          body: { query: q, limit: 6 },
+        });
+        if (!error && data?.results) setSemResults(data.results);
+      } catch {
+        // ignore
+      } finally {
+        setSemLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [input, mode]);
+
+  const openResult = (r: SemanticResult) => {
+    const view = KIND_META[r.kind]?.view;
+    if (view && onNavigate) onNavigate(view);
+    onOpenChange(false);
+  };
+
 
   useEffect(() => {
     if (scrollRef.current) {
