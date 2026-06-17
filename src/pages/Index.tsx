@@ -99,7 +99,7 @@ const Index = () => {
           </div>
         </header>
 
-        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} onNavigate={setActiveView} />
         <div className="animate-slide-in p-4 md:p-8">
           <ActiveComponent />
         </div>

@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Search, Send, Bot, User, Loader2, Sparkles, FileText, Receipt, Contact, FolderKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,23 @@ import { supabase } from "@/integrations/supabase/client";
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/one-ai-chat`;
 
 type Msg = { role: "user" | "assistant"; content: string };
+
+type SemanticResult = {
+  id: string;
+  kind: "invoice" | "expense" | "business_card" | "project";
+  ref_id: string;
+  content: string;
+  metadata: Record<string, any>;
+  similarity: number;
+};
+
+const KIND_META: Record<SemanticResult["kind"], { view: string; label: string; Icon: any }> = {
+  invoice: { view: "invoices", label: "Τιμολόγιο", Icon: FileText },
+  expense: { view: "expenses", label: "Δαπάνη", Icon: Receipt },
+  business_card: { view: "business-cards", label: "Κάρτα", Icon: Contact },
+  project: { view: "projects", label: "Project", Icon: FolderKanban },
+};
+
 
 async function streamChat({
   messages,
@@ -110,13 +127,17 @@ async function streamChat({
 interface GlobalSearchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onNavigate?: (view: string) => void;
 }
 
-export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
+export default function GlobalSearch({ open, onOpenChange, onNavigate }: GlobalSearchProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"search" | "chat">("search");
+  const [semResults, setSemResults] = useState<SemanticResult[]>([]);
+  const [semLoading, setSemLoading] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -124,12 +145,44 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      // Reset on close
       setInput("");
       setMessages([]);
       setMode("search");
+      setSemResults([]);
     }
   }, [open]);
+
+  // Debounced semantic search while typing in search mode
+  useEffect(() => {
+    if (mode !== "search") return;
+    const q = input.trim();
+    if (q.length < 2) {
+      setSemResults([]);
+      setSemLoading(false);
+      return;
+    }
+    setSemLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("semantic-search", {
+          body: { query: q, limit: 6 },
+        });
+        if (!error && data?.results) setSemResults(data.results);
+      } catch {
+        // ignore
+      } finally {
+        setSemLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [input, mode]);
+
+  const openResult = (r: SemanticResult) => {
+    const view = KIND_META[r.kind]?.view;
+    if (view && onNavigate) onNavigate(view);
+    onOpenChange(false);
+  };
+
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -260,6 +313,68 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
               )}
             </div>
           </ScrollArea>
+        ) : input.trim().length >= 2 ? (
+          <ScrollArea className="h-[400px] px-3 py-3">
+            <div className="px-2 pb-2 flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Σημασιολογικά αποτελέσματα
+              </span>
+              {semLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+            </div>
+            {semResults.length === 0 && !semLoading ? (
+              <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+                Κανένα αποτέλεσμα. Πατήστε Enter για να ρωτήσετε το AI.
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {semResults.map((r) => {
+                  const meta = KIND_META[r.kind];
+                  const Icon = meta?.Icon ?? FileText;
+                  const title =
+                    r.metadata?.supplier ||
+                    r.metadata?.name ||
+                    r.metadata?.company ||
+                    r.metadata?.invoice_number ||
+                    r.metadata?.file_name ||
+                    r.content.slice(0, 60);
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => openResult(r)}
+                      className="w-full text-left flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground truncate">{title}</span>
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">
+                            {meta?.label}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {r.content}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground shrink-0 mt-1">
+                        {Math.round(r.similarity * 100)}%
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-3 px-3 pt-3 border-t border-border">
+              <button
+                onClick={() => send(input)}
+                className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+              >
+                <Sparkles className="h-4 w-4 text-primary" />
+                Ρωτήστε το AI: <span className="font-medium truncate">"{input}"</span>
+              </button>
+            </div>
+          </ScrollArea>
         ) : (
           <div className="flex flex-col items-center justify-center h-[400px] text-center px-8">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-4">
@@ -269,9 +384,9 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
               Τι ψάχνετε;
             </h3>
             <p className="text-sm text-muted-foreground max-w-sm">
-              Αναζητήστε τιμολόγια, δαπάνες ή projects, ή ρωτήστε οτιδήποτε σχετικό με τα δεδομένα σας.
+              Αναζητήστε τιμολόγια, δαπάνες, κάρτες ή projects με AI semantic search, ή ρωτήστε οτιδήποτε.
             </p>
-            <div className="flex flex-wrap gap-2 mt-6">
+            <div className="flex flex-wrap gap-2 mt-6 justify-center">
               {[
                 "Ποιά τιμολόγια είναι σε εκκρεμότητα;",
                 "Εμφάνισε τις δαπάνες αυτού του μήνα",
@@ -288,6 +403,7 @@ export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) 
             </div>
           </div>
         )}
+
 
         {/* Input */}
         <form

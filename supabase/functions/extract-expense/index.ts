@@ -253,10 +253,31 @@ If a field is not visible, set it to null.`;
       });
     }
 
+    try {
+      const items = (expenses ?? []).map((exp: any) => ({
+        kind: "expense",
+        ref_id: exp.id,
+        content: [
+          exp.supplier, exp.supplier_vat, exp.expense_number,
+          exp.expense_date, exp.amount ? `${exp.amount} ${exp.currency || "EUR"}` : null,
+          exp.document_type, exp.description, exp.file_name,
+        ].filter(Boolean).join(" | "),
+        metadata: { supplier: exp.supplier, amount: exp.amount, file_name: exp.file_name },
+      }));
+      if (items.length) {
+        fetch(`${supabaseUrl}/functions/v1/generate-embedding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: authHeader },
+          body: JSON.stringify({ items }),
+        }).catch((e) => console.error("embed dispatch", e));
+      }
+    } catch (e) { console.error("embed prep", e); }
+
     return new Response(
       JSON.stringify({ expenses, count: expenses?.length ?? 0 }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (e) {
     console.error("Error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
