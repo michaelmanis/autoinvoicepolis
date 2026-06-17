@@ -127,13 +127,17 @@ async function streamChat({
 interface GlobalSearchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onNavigate?: (view: string) => void;
 }
 
-export default function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
+export default function GlobalSearch({ open, onOpenChange, onNavigate }: GlobalSearchProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"search" | "chat">("search");
+  const [semResults, setSemResults] = useState<SemanticResult[]>([]);
+  const [semLoading, setSemLoading] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
